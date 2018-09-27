@@ -35,7 +35,7 @@ class CommandPannel:
         self.twist = 0
         self.time = time.time()
 
-        Publisher.broadcast_ip = "127.0.0.255"
+        # Publisher.broadcast_ip = "<broadcast>"
         self.pub = Publisher(self.fields,self.typ,self.port)
 
         self.root.after(100, self.publish)
@@ -76,7 +76,6 @@ class CommandPannel:
         self.pub.send(self.forwards,self.twist)
         print "magic"
         self.root.after(100, self.publish)
-
 
 
 if __name__ == "__main__":
