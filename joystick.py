@@ -1,4 +1,7 @@
 import pygame
+from UDPComms import Publisher
+
+a = Publisher("f t", b"ff", 8830)
 
 pygame.display.init()
 pygame.joystick.init()
@@ -16,6 +19,12 @@ print(JoyAx)
 # Prints the values for axis0
 while True:
     pygame.event.pump()
-    print(pygame.joystick.Joystick(0).get_axis(5))
-    print(pygame.joystick.Joystick(0).get_axis(2))
-    print(pygame.joystick.Joystick(0).get_button(5))
+    forward = (pygame.joystick.Joystick(0).get_axis(5))
+    twist = (pygame.joystick.Joystick(0).get_axis(2))
+    on = (pygame.joystick.Joystick(0).get_button(5))
+
+    if on:
+        a.send(120*forward,120*twist)
+    else:
+        a.send(0,0)
+
