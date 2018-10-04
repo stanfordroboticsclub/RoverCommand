@@ -29,8 +29,9 @@ class CommandPannel:
         self.root.bind('<Right>', lambda x: self.rightKey(x))
         self.root.bind('<Up>',    lambda x: self.upKey(x))
         self.root.bind('<Down>',  lambda x: self.downKey(x))
+        self.root.bind('<space>',  lambda x: self.spaceKey(x))
 
-        self.speed = 100
+        self.speed = 140
         self.forwards = 0
         self.twist = 0
         self.time = time.time()
@@ -44,6 +45,12 @@ class CommandPannel:
     @staticmethod
     def ha():
         print "ha"
+
+    def spaceKey(self, event):
+        print "space"
+        self.forwards = 0
+        self.twist = 0
+        self.time = time.time()
 
     def leftKey(self, event):
         print "left"
