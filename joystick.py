@@ -24,7 +24,8 @@ while True:
     on = (pygame.joystick.Joystick(0).get_button(5))
 
     if on:
-        a.send(-120*forward,120*twist)
+        a.send(-120*forward,-120*twist)
     else:
         a.send(0,0)
 
+    pygame.time.wait(100)
