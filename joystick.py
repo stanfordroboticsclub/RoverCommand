@@ -1,6 +1,8 @@
+import os
 import pygame
 from UDPComms import Publisher
 
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 a = Publisher("f t", b"ff", 8830)
 
 pygame.display.init()

@@ -1,0 +1,8 @@
+[Unit]
+Description=PS4 Joystick service
+
+[Service]
+ExecStart=/usr/local/bin/ds4drv
+
+[Install]
+WantedBy=multi-user.target
