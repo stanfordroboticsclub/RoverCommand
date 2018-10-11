@@ -1,5 +1,8 @@
 # RoverCommand
 
+Prerequisites
+----
+- Make sure you have the [UDPComms](https://github.com/stanfordroboticsclub/UDPComms) library installed before using
 
 Panel
 ----
