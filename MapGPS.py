@@ -59,6 +59,7 @@ class GPSPannel:
 
         self.gps = Subscriber(self.fields,self.typ,self.port)
         self.pt = None
+        self.pt_click = None
 
 
         self.root.after(100, self.update)
@@ -80,7 +81,15 @@ class GPSPannel:
 
 
     def mouse_callback(self, event):
+        if self.pt_click is not None:
+           self.del_point(self.pt_click)
+
         print "clicked at", event.x, event.y
+        self.map_to_gps(event.x, event.y)
+        y_new, x_new = self.map_to_gps(event.x, event.y)
+
+        self.pt_click = self.plot_point(y_new, x_new, 'blue')
+
 
     def gps_to_map(self, gps_pos):
         # y = lat = 0
@@ -97,6 +106,11 @@ class GPSPannel:
 
     def del_point(self, point):
         self.canvas.delete(point)
+
+    def map_to_gps(self, x, y):
+        y_new = (y * (self.bottom_right[0] - self.top_left[0]) / (self.map_size[0])) + self.top_left[0]
+        x_new = (x * (self.bottom_right[1] - self.top_left[1]) / (self.map_size[1])) + self.top_left[1]
+        return y_new, x_new
 
 if __name__ == "__main__":
     a = GPSPannel()
