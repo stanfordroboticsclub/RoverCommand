@@ -19,9 +19,9 @@ from UDPComms import Subscriber
 
 class GPSPannel:
 
-    fields = "forward twist"
-    typ = "ff"
-    port = 8830
+    fields = "time sats lat lon alt error_lat error_lon error_alt"
+    typ = "ii3f3f"
+    port = 8860
 
     def __init__(self):
 
@@ -58,18 +58,24 @@ class GPSPannel:
         self.canvas.bind("<Button-1>", self.mouse_callback)
 
         self.gps = Subscriber(self.fields,self.typ,self.port)
-        pt = self.plot_point( 37.429, -122.170, "#ff6400")
+        self.pt = None
 
 
-        # self.root.after(100, self.update)
+        self.root.after(100, self.update)
         self.root.mainloop()
 
     def update(self):
-        try:
-            msg = self.gps.recv()
-        except:
-            pass
-        # self.root.after(100, self.update)
+        # try:
+        msg = self.gps.recv()
+        #test = GPSPannel()
+
+        if self.pt is not None:
+            self.del_point(self.pt)
+
+        self.pt = self.plot_point(msg.lat, msg.lon, '#ff6400')
+        # except:
+        #     pass
+        self.root.after(100, self.update)
 
 
 
@@ -95,5 +101,14 @@ class GPSPannel:
 if __name__ == "__main__":
     a = GPSPannel()
 
+"""""
+test = GPSPannel()
+while True:
+    if pt is not None:
+        test.del_point(pt)
+        
+    test.update()
+    test.plot_point(msg.lat, msg.long, '#ff6400')
 
 
+"""
