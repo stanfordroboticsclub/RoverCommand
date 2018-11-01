@@ -54,6 +54,15 @@ class GPSPannel:
         self.lat.pack()
         self.lon.pack()
 
+        ### numeric input display
+        tk.Label(self.root, text="Latitude").pack()
+        tk.Label(self.root, text="Longitude").pack()
+        self.e1 = tk.Entry(self.root)
+        self.e2 = tk.Entry(self.root)
+        self.e1.pack()
+        self.e2.pack()
+        tk.Button(self.root, text='Create Point',command=self.plot_numeric_point).pack()
+
         ### canvas display
         self.canvas=tk.Canvas(self.root,width= self.map_size[1], height=self.map_size[0])
         self.canvas.pack()
@@ -69,14 +78,7 @@ class GPSPannel:
 
 
 
-        master = tk.Tk()
-        tk.Label(master, text="Latitude").grid(row=0)
-        tk.Label(master, text="Longitude").grid(row=1)
-        self.e1 = tk.Entry(master)
-        self.e2 = tk.Entry(master)
-        self.e1.grid(row=0, column=1)
-        self.e2.grid(row=1, column=1)
-        tk.Button(master, text='Create Point',command=self.plot_numeric_point).grid(row=3, column=0, sticky=tk.W, pady=4)
+
 
         self.root.after(100, self.update)
         self.root.mainloop()
