@@ -68,8 +68,17 @@ class GPSPannel:
         self.pt_click = None
 
 
+
+        master = tk.Tk()
+        tk.Label(master, text="Latitude").grid(row=0)
+        tk.Label(master, text="Longitude").grid(row=1)
+        self.e1 = tk.Entry(master)
+        self.e2 = tk.Entry(master)
+        self.e1.grid(row=0, column=1)
+        self.e2.grid(row=1, column=1)
+        tk.Button(master, text='Create Point',command=self.plot_numeric_point).grid(row=3, column=0, sticky=tk.W, pady=4)
+
         self.root.after(100, self.update)
-        ###self.pub = Publisher(fields, typ, port)
         self.root.mainloop()
 
 
@@ -121,6 +130,14 @@ class GPSPannel:
         y_new = (y * (self.bottom_right[0] - self.top_left[0]) / (self.map_size[0])) + self.top_left[0]
         x_new = (x * (self.bottom_right[1] - self.top_left[1]) / (self.map_size[1])) + self.top_left[1]
         return y_new, x_new
+
+    def plot_numeric_point(self):
+        self.plot_point(float(self.e1.get()), float(self.e2.get()), 'green')
+
+
+
+
+
 
 
 
