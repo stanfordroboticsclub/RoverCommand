@@ -5,6 +5,7 @@ from __future__ import division
 import time
 import Tkinter as tk
 from UDPComms import Subscriber
+from UDPComms import Publisher
 
 
 
@@ -20,8 +21,13 @@ from UDPComms import Subscriber
 class GPSPannel:
 
     fields = "time sats lat lon alt error_lat error_lon error_alt"
+    fields_out = "lat lon"
     typ = "ii3f3f"
+    typ_out = "2f"
     port = 8860
+    port_out = 8890
+    pub = Publisher(fields_out, typ_out, port_out)
+
 
     def __init__(self):
 
@@ -63,7 +69,9 @@ class GPSPannel:
 
 
         self.root.after(100, self.update)
+        ###self.pub = Publisher(fields, typ, port)
         self.root.mainloop()
+
 
     def update(self):
         # try:
@@ -89,6 +97,8 @@ class GPSPannel:
         y_new, x_new = self.map_to_gps(event.x, event.y)
 
         self.pt_click = self.plot_point(y_new, x_new, 'blue')
+        self.pub.send(y_new, x_new)
+
 
 
     def gps_to_map(self, gps_pos):
@@ -112,17 +122,8 @@ class GPSPannel:
         x_new = (x * (self.bottom_right[1] - self.top_left[1]) / (self.map_size[1])) + self.top_left[1]
         return y_new, x_new
 
+
+
 if __name__ == "__main__":
     a = GPSPannel()
 
-"""""
-test = GPSPannel()
-while True:
-    if pt is not None:
-        test.del_point(pt)
-        
-    test.update()
-    test.plot_point(msg.lat, msg.long, '#ff6400')
-
-
-"""
