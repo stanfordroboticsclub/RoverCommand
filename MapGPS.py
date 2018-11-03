@@ -6,6 +6,7 @@ import time
 import Tkinter as tk
 from UDPComms import Subscriber
 from UDPComms import Publisher
+from UDPComms import timeout
 
 
 
@@ -34,9 +35,14 @@ class GPSPannel:
         #### config
         self.top_left =     (37.430638, -122.176173)
         self.bottom_right = (37.426803, -122.168855)
+        self.pt = None
+        self.pt_new = None
 
-        self.map_size = (949, 1440)
+        self.map_size = (949, 1440) ## (height, width)
+        ### self.smaller_map = self.map.zoom(2, 2).subsample(3, 3)
+        ### self.smaller_map = self.map.subsample(2, 2)
         self.map_file = 'maps/zoomed_small.gif'
+
 
 
         ### tkinter setup
@@ -51,32 +57,28 @@ class GPSPannel:
         self.lat_var.set("Lat: ")
         self.lon_var.set("Lon: ")
 
-        self.lat.pack()
-        self.lon.pack()
+        ## self.lat.grid()
+        ## self.lon.grid()
 
         ### numeric input display
-        tk.Label(self.root, text="Latitude").pack()
-        tk.Label(self.root, text="Longitude").pack()
+        tk.Label(self.root, text="Latitude").grid(row=0, column=0)
+        tk.Label(self.root, text="Longitude").grid(row=0, column=2)
         self.e1 = tk.Entry(self.root)
         self.e2 = tk.Entry(self.root)
-        self.e1.pack()
-        self.e2.pack()
-        tk.Button(self.root, text='Create Point',command=self.plot_numeric_point).pack()
+        self.e1.grid(row=0 ,column=1)
+        self.e2.grid(row=0, column=3)
+        tk.Button(self.root, text='Create Point',command=self.plot_numeric_point).grid(row=0, column=4)
 
         ### canvas display
-        self.canvas=tk.Canvas(self.root,width= self.map_size[1], height=self.map_size[0])
-        self.canvas.pack()
+        self.canvas=tk.Canvas(self.root, width= self.map_size[1], height= self.map_size[0])
+        self.canvas.grid(row=1, column=0, rowspan=10, columnspan=10)
 
         self.map = tk.PhotoImage(file=self.map_file)
         self.canvas.create_image(0, 0, image=self.map, anchor=tk.NW)
 
         self.canvas.bind("<Button-1>", self.mouse_callback)
 
-        self.gps = Subscriber(self.fields,self.typ,self.port)
-        self.pt = None
-        self.pt_click = None
-
-
+        self.gps = Subscriber(self.fields,self.typ,self.port, 2)
 
 
 
@@ -85,30 +87,32 @@ class GPSPannel:
 
 
     def update(self):
-        # try:
-        msg = self.gps.recv()
-        #test = GPSPannel()
+        try:
+           msg = self.gps.recv()
+        except timeout:
+            self.root.after(100, self.update)
+            return
 
         if self.pt is not None:
             self.del_point(self.pt)
 
         self.pt = self.plot_point(msg.lat, msg.lon, '#ff6400')
-        # except:
-        #     pass
+
+        if self.pt_new is not None:
+            self.pub.send(self.lat_new, self.lon_new)
+
+
         self.root.after(100, self.update)
 
 
 
     def mouse_callback(self, event):
-        if self.pt_click is not None:
-           self.del_point(self.pt_click)
 
         print "clicked at", event.x, event.y
         self.map_to_gps(event.x, event.y)
-        y_new, x_new = self.map_to_gps(event.x, event.y)
+        self.lat_click, self.lon_click = self.map_to_gps(event.x, event.y)
 
-        self.pt_click = self.plot_point(y_new, x_new, 'blue')
-        self.pub.send(y_new, x_new)
+        self.new_point(self.lat_click, self.lon_click)
 
 
 
@@ -129,12 +133,25 @@ class GPSPannel:
         self.canvas.delete(point)
 
     def map_to_gps(self, x, y):
-        y_new = (y * (self.bottom_right[0] - self.top_left[0]) / (self.map_size[0])) + self.top_left[0]
-        x_new = (x * (self.bottom_right[1] - self.top_left[1]) / (self.map_size[1])) + self.top_left[1]
-        return y_new, x_new
+        lat_click = (y * (self.bottom_right[0] - self.top_left[0]) / (self.map_size[0])) + self.top_left[0]
+        lon_click = (x * (self.bottom_right[1] - self.top_left[1]) / (self.map_size[1])) + self.top_left[1]
+        return lat_click, lon_click
 
     def plot_numeric_point(self):
-        self.plot_point(float(self.e1.get()), float(self.e2.get()), 'green')
+        self.lat_input = float(self.e1.get())
+        self.lon_input = float(self.e2.get())
+
+        self.new_point(self.lat_input, self.lon_input)
+
+    def new_point(self, lat, lon):
+
+        self.lat_new, self.lon_new = lat, lon
+        if self.pt_new is not None:
+            self.del_point(self.pt_new)
+
+        self.pt_new = self.plot_point(lat, lon, 'cyan')
+
+
 
 
 
