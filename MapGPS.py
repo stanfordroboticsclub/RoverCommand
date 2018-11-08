@@ -8,6 +8,8 @@ from UDPComms import Subscriber
 from UDPComms import Publisher
 from UDPComms import timeout
 
+from math import sin,cos,pi
+
 
 
 # zoomed out
@@ -36,6 +38,7 @@ class GPSPannel:
         self.top_left =     (37.430638, -122.176173)
         self.bottom_right = (37.426803, -122.168855)
         self.pt = None
+        self.arrow = None
         self.pt_new = None
 
         self.map_size = (949, 1440) ## (height, width)
@@ -78,35 +81,48 @@ class GPSPannel:
 
         self.canvas.bind("<Button-1>", self.mouse_callback)
 
-        self.gps = Subscriber(self.fields,self.typ,self.port, 2)
-        self.gyro = Subscriber('angle','f',8870, 1)
+        self.gps = Subscriber(self.fields,self.typ,self.port, 0.5)
+        self.gyro = Subscriber('angle','f',8870, 0.4)
         self.angle = 0
 
-        self.root.after(100, self.update)
+        self.root.after(50, self.update)
+        self.root.after(10, self.gyro_update)
         self.root.mainloop()
 
 
-    def update(self):
-        
-        if self.pt is not None:
-            self.del_point(self.pt)
-
-        try:
-            msg = self.gps.recv()
-            self.pt = self.plot_point(msg.lat, msg.lon, '#ff6400')
-        except timeout:
-            pass
-
+    def gyro_update(self):
         try:
             msg = self.gyro.recv()
             self.angle = msg.angle
+        except timeout:
+            pass
+        self.root.after(10, self.gyro_update)
+
+    def update(self):
+
+        try:
+            msg = self.gps.recv()
+
+            if self.pt is not None:
+                self.del_point(self.pt)
+                
+            if self.arrow is not None:
+                self.canvas.delete(self.arrow)
+
+            self.pt = self.plot_point(msg.lat, msg.lon, '#ff6400')
+
+            y,x = self.gps_to_map( (msg.lat, msg.lon) )
+            r = 20
+            self.arrow = self.canvas.create_line(x, y, x + r*sin(self.angle * pi/180),
+                                                       y - r*cos(self.angle * pi/180),
+                                                          arrow=tk.LAST)
         except timeout:
             pass
 
         if self.pt_new is not None:
             self.pub.send(self.lat_new, self.lon_new)
 
-        self.root.after(100, self.update)
+        self.root.after(50, self.update)
 
 
     def mouse_callback(self, event):
