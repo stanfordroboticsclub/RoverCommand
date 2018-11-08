@@ -79,31 +79,34 @@ class GPSPannel:
         self.canvas.bind("<Button-1>", self.mouse_callback)
 
         self.gps = Subscriber(self.fields,self.typ,self.port, 2)
-
-
+        self.gyro = Subscriber('angle','f',8870, 1)
+        self.angle = 0
 
         self.root.after(100, self.update)
         self.root.mainloop()
 
 
     def update(self):
-        try:
-           msg = self.gps.recv()
-        except timeout:
-            self.root.after(100, self.update)
-            return
-
+        
         if self.pt is not None:
             self.del_point(self.pt)
 
-        self.pt = self.plot_point(msg.lat, msg.lon, '#ff6400')
+        try:
+            msg = self.gps.recv()
+            self.pt = self.plot_point(msg.lat, msg.lon, '#ff6400')
+        except timeout:
+            pass
+
+        try:
+            msg = self.gyro.recv()
+            self.angle = msg.angle
+        except timeout:
+            pass
 
         if self.pt_new is not None:
             self.pub.send(self.lat_new, self.lon_new)
 
-
         self.root.after(100, self.update)
-
 
 
     def mouse_callback(self, event):
@@ -113,7 +116,6 @@ class GPSPannel:
         self.lat_click, self.lon_click = self.map_to_gps(event.x, event.y)
 
         self.new_point(self.lat_click, self.lon_click)
-
 
 
     def gps_to_map(self, gps_pos):
@@ -150,12 +152,6 @@ class GPSPannel:
             self.del_point(self.pt_new)
 
         self.pt_new = self.plot_point(lat, lon, 'cyan')
-
-
-
-
-
-
 
 
 
