@@ -7,7 +7,14 @@ a = Publisher("f t", b"ff", 8830)
 
 pygame.display.init()
 pygame.joystick.init()
-pygame.joystick.Joystick(0).init()
+
+# wait untill joystick is connected
+while 1:
+    try:
+        pygame.joystick.Joystick(0).init()
+        break
+    except pygame.error:
+        pygame.time.wait(500)
 
 # Prints the joystick's name
 JoyName = pygame.joystick.Joystick(0).get_name()
