@@ -3,7 +3,7 @@ import pygame
 from UDPComms import Publisher
 
 os.environ["SDL_VIDEODRIVER"] = "dummy"
-a = Publisher("f t", b"ff", 8830)
+a = Publisher(8830)
 
 pygame.display.init()
 pygame.joystick.init()
@@ -33,8 +33,8 @@ while True:
     on = (pygame.joystick.Joystick(0).get_button(5))
 
     if on:
-        a.send(-150*forward,-80*twist)
+        a.send({'f':-150*forward,'t':-80*twist})
     else:
-        a.send(0,0)
+        a.send({'f':0,'t':0})
 
     pygame.time.wait(100)
