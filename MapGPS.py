@@ -23,13 +23,6 @@ from math import sin,cos,pi
 
 class GPSPannel:
 
-    fields = "time sats lat lon alt error_lat error_lon error_alt"
-    fields_out = "lat lon"
-    typ = "ii3f3f"
-    typ_out = "2f"
-    port = 8860
-    port_out = 8890
-    pub = Publisher(fields_out, typ_out, port_out)
 
 
     def __init__(self):
@@ -46,7 +39,13 @@ class GPSPannel:
         ### self.smaller_map = self.map.subsample(2, 2)
         self.map_file = 'maps/zoomed_small.gif'
 
+        ## UDPComms
+        self.gps =      Subscriber(8280, timeout=2)
+        self.gps_base = Subscriber(8290, timeout=2)
+        self.target_pub = Publisher(8310)
 
+        self.gyro = Subscriber(8870, timeout=1)
+        self.angle = 0
 
         ### tkinter setup
         self.root = tk.Tk()
@@ -60,8 +59,6 @@ class GPSPannel:
         self.lat_var.set("Lat: ")
         self.lon_var.set("Lon: ")
 
-        ## self.lat.grid()
-        ## self.lon.grid()
 
         ### numeric input display
         tk.Label(self.root, text="Latitude").grid(row=0, column=0)
@@ -81,46 +78,45 @@ class GPSPannel:
 
         self.canvas.bind("<Button-1>", self.mouse_callback)
 
-        self.gps = Subscriber(self.fields,self.typ,self.port, 0.5)
-        self.gyro = Subscriber('angle','f',8870, 0.4)
-        self.angle = 0
-
         self.root.after(50, self.update)
-        self.root.after(10, self.gyro_update)
         self.root.mainloop()
-
-
-    def gyro_update(self):
-        try:
-            msg = self.gyro.recv()
-            self.angle = msg.angle
-        except timeout:
-            pass
-        self.root.after(10, self.gyro_update)
 
     def update(self):
 
         try:
-            msg = self.gps.recv()
-
-            if self.pt is not None:
-                self.del_point(self.pt)
-                
-            if self.arrow is not None:
-                self.canvas.delete(self.arrow)
-
-            self.pt = self.plot_point(msg.lat, msg.lon, '#ff6400')
-
-            y,x = self.gps_to_map( (msg.lat, msg.lon) )
-            r = 20
-            self.arrow = self.canvas.create_line(x, y, x + r*sin(self.angle * pi/180),
-                                                       y - r*cos(self.angle * pi/180),
-                                                          arrow=tk.LAST)
+            rover = self.gps.get()
         except timeout:
-            pass
+            print("GPS TIMED OUT")
+        else:
+            if self.rover_pt is not None:
+                self.del_point(self.rover_pt)
+            self.rover_pt = self.plot_point(rover['lat'], rover['lon'], '#ff6400')
+
+            if rover['local'][0]:
+                print("x", rover['local'][1], "y", rover['local'][2])
+
+        try:
+            base =  self.gps_base.get()
+        except timeout:
+            print("GPS TIMED OUT")
+        else:
+            if self.base_pt is not None:
+                self.del_point(self.base_pt)
+            self.base_pt = self.plot_point(rover['lat'], rover['lon'], '#ff0000')
+
+            
+        # if self.arrow is not None:
+        #     self.canvas.delete(self.arrow)
+
+
+        # y,x = self.gps_to_map( (msg['lat'], msg['lon']) )
+        # r = 20
+        # self.arrow = self.canvas.create_line(x, y, x + r*sin(self.angle * pi/180),
+        #                                            y - r*cos(self.angle * pi/180),
+        #                                               arrow=tk.LAST)
 
         if self.pt_new is not None:
-            self.pub.send(self.lat_new, self.lon_new)
+            self.target_pub.send([self.lat_new, self.lon_new] )
 
         self.root.after(50, self.update)
 
@@ -168,7 +164,6 @@ class GPSPannel:
             self.del_point(self.pt_new)
 
         self.pt_new = self.plot_point(lat, lon, 'cyan')
-
 
 
 
