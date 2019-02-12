@@ -145,7 +145,7 @@ class GPSPannel:
         return (y,x)
 
     def plot_point(self, lat, lon, color):
-        r = 10
+        r = 3
         y,x = self.gps_to_map( (lat, lon) )
         print x,y
         return self.canvas.create_oval( x + r, y +r , x -r , y-r, fill=color)
@@ -159,10 +159,7 @@ class GPSPannel:
         return lat_click, lon_click
 
     def plot_numeric_point(self):
-        self.lat_input = float(self.e1.get())
-        self.lon_input = float(self.e2.get())
-
-        self.new_point(self.lat_input, self.lon_input)
+        self.new_point(float(self.e1.get()), float(self.e2.get()))
 
     def new_point(self, lat, lon):
 
