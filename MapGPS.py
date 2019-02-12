@@ -28,16 +28,23 @@ class GPSPannel:
     def __init__(self):
 
         #### config
-        self.top_left =     (37.430638, -122.176173)
-        self.bottom_right = (37.426803, -122.168855)
-        self.pt = None
-        self.arrow = None
-        self.pt_new = None
+        # self.top_left =     (37.430638, -122.176173)
+        # self.bottom_right = (37.426803, -122.168855)
 
-        self.map_size = (949, 1440) ## (height, width)
+        self.top_left =     (37.432565, -122.180000)
+        self.bottom_right = (37.421642, -122.158724)
+
+        self.rover_pt = None
+        self.arrow = None
+        self.pub_pt = None
+
+        # self.map_size = (949, 1440) ## (height, width)
+        self.map_size = (750, 1160) ## (height, width)
         ### self.smaller_map = self.map.zoom(2, 2).subsample(3, 3)
         ### self.smaller_map = self.map.subsample(2, 2)
-        self.map_file = 'maps/zoomed_small.gif'
+
+        # self.map_file = 'maps/zoomed_small.gif'
+        self.map_file = 'maps/campus.gif'
 
         ## UDPComms
         self.gps =      Subscriber(8280, timeout=2)
@@ -115,7 +122,7 @@ class GPSPannel:
         #                                            y - r*cos(self.angle * pi/180),
         #                                               arrow=tk.LAST)
 
-        if self.pt_new is not None:
+        if self.pub_pt is not None:
             self.target_pub.send([self.lat_new, self.lon_new] )
 
         self.root.after(50, self.update)
@@ -160,10 +167,10 @@ class GPSPannel:
     def new_point(self, lat, lon):
 
         self.lat_new, self.lon_new = lat, lon
-        if self.pt_new is not None:
-            self.del_point(self.pt_new)
+        if self.pub_pt is not None:
+            self.del_point(self.pub_pt)
 
-        self.pt_new = self.plot_point(lat, lon, 'cyan')
+        self.pub_pt = self.plot_point(lat, lon, 'cyan')
 
 
 
