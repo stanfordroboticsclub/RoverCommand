@@ -23,8 +23,6 @@ from math import sin,cos,pi
 
 class GPSPannel:
 
-
-
     def __init__(self):
 
         #### config
@@ -34,6 +32,7 @@ class GPSPannel:
         self.top_left =     (37.432565, -122.180000)
         self.bottom_right = (37.421642, -122.158724)
 
+        self.base_pt = None
         self.rover_pt = None
         self.arrow = None
         self.pub_pt = None
@@ -105,11 +104,12 @@ class GPSPannel:
         try:
             base =  self.gps_base.get()
         except timeout:
-            print("GPS TIMED OUT")
+            pass
+            print("GPSBase TIMED OUT")
         else:
             if self.base_pt is not None:
                 self.del_point(self.base_pt)
-            self.base_pt = self.plot_point(rover['lat'], rover['lon'], '#ff0000')
+            self.base_pt = self.plot_point(base['lat'], base['lon'], '#ff0000')
 
             
         # if self.arrow is not None:
@@ -147,7 +147,7 @@ class GPSPannel:
     def plot_point(self, lat, lon, color):
         r = 3
         y,x = self.gps_to_map( (lat, lon) )
-        print x,y
+        # print x,y
         return self.canvas.create_oval( x + r, y +r , x -r , y-r, fill=color)
 
     def del_point(self, point):
