@@ -4,6 +4,7 @@ from __future__ import division
 
 import time
 import Tkinter as tk
+from Tkinter import *
 from UDPComms import Subscriber
 from UDPComms import Publisher
 from UDPComms import timeout
@@ -57,6 +58,11 @@ class GPSPannel:
         self.root = tk.Tk()
         self.lat_var = tk.StringVar()
         self.lon_var = tk.StringVar()
+        self.listbox = tk.Listbox(self.root)
+        self.scrollbar = tk.Scrollbar(self.root, orient="vertical")
+        self.scrollbar.config(command=self.listbox.yview)
+        self.scrollbar.grid(row=2, column=0)
+
 
         ### label display
         self.lat = tk.Label(self.root, textvariable = self.lat_var)
@@ -75,9 +81,14 @@ class GPSPannel:
         self.e2.grid(row=0, column=3)
         tk.Button(self.root, text='Create Point',command=self.plot_numeric_point).grid(row=0, column=4)
 
+        ### point library display
+        tk.Label(self.root, text="Point Library").grid(row=1, column=0)
+        self.listbox.grid(row=2, column=0)
+        self.numPoints = 0;
+
         ### canvas display
         self.canvas=tk.Canvas(self.root, width= self.map_size[1], height= self.map_size[0])
-        self.canvas.grid(row=1, column=0, rowspan=10, columnspan=10)
+        self.canvas.grid(row=1, column=1, rowspan=10, columnspan=10)
 
         self.map = tk.PhotoImage(file=self.map_file)
         self.canvas.create_image(0, 0, image=self.map, anchor=tk.NW)
@@ -164,10 +175,13 @@ class GPSPannel:
     def new_point(self, lat, lon):
 
         self.lat_new, self.lon_new = lat, lon
-        if self.pub_pt is not None:
-            self.del_point(self.pub_pt)
+        # if self.pub_pt is not None:
+        #    self.del_point(self.pub_pt)
 
         self.pub_pt = self.plot_point(lat, lon, 'cyan')
+        self.listbox.insert("end", "Point " + str(self.numPoints + 1))
+        self.numPoints += 1
+
 
 
 
