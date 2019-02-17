@@ -35,6 +35,7 @@ class GPSPannel:
 
         self.base_pt = None
         self.rover_pt = None
+        self.selected_pt = None
         self.arrow = None
         self.pub_pt = None
 
@@ -61,7 +62,7 @@ class GPSPannel:
         self.listbox = tk.Listbox(self.root)
         self.scrollbar = tk.Scrollbar(self.root, orient="vertical")
         self.scrollbar.config(command=self.listbox.yview)
-        self.scrollbar.grid(row=2, column=0)
+        self.scrollbar.grid(row=6, column=0)
 
 
         ### label display
@@ -84,6 +85,7 @@ class GPSPannel:
         ### point library display
         tk.Label(self.root, text="Point Library").grid(row=1, column=0)
         self.listbox.grid(row=2, column=0)
+        # tk.Button(self.root, text='Delete Point', command=self.del_point(self.selected_pt)).grid(row=5, column=0)
         self.numPoints = 0;
 
         ### canvas display
@@ -99,6 +101,10 @@ class GPSPannel:
         self.root.mainloop()
 
     def update(self):
+        self.items = map(int, self.listbox.curselection())
+        for i in self.items:
+            coordinates = self.listbox.get(i).split(":", 2)
+            self.plot_selected_point(float(coordinates[0]), float(coordinates[1]))
 
         try:
             rover = self.gps.get()
@@ -107,7 +113,7 @@ class GPSPannel:
         else:
             if self.rover_pt is not None:
                 self.del_point(self.rover_pt)
-            self.rover_pt = self.plot_point(rover['lat'], rover['lon'], '#ff6400')
+            self.rover_pt = self.plot_point(rover['lat'], rover['lon'], 3, '#ff6400')
 
             if rover['local'][0]:
                 print("x", rover['local'][1], "y", rover['local'][2])
@@ -120,7 +126,7 @@ class GPSPannel:
         else:
             if self.base_pt is not None:
                 self.del_point(self.base_pt)
-            self.base_pt = self.plot_point(base['lat'], base['lon'], '#ff0000')
+            self.base_pt = self.plot_point(base['lat'], base['lon'], 3, '#ff0000')
 
             
         # if self.arrow is not None:
@@ -134,7 +140,7 @@ class GPSPannel:
         #                                               arrow=tk.LAST)
 
         if self.pub_pt is not None:
-            self.target_pub.send([self.lat_new, self.lon_new] )
+            self.target_pub.send([self.lat_selected, self.lon_selected] )
 
         self.root.after(50, self.update)
 
@@ -146,6 +152,7 @@ class GPSPannel:
         self.lat_click, self.lon_click = self.map_to_gps(event.x, event.y)
 
         self.new_point(self.lat_click, self.lon_click)
+        self.plot_selected_point(self.lat_click, self.lon_click)
 
 
     def gps_to_map(self, gps_pos):
@@ -155,10 +162,11 @@ class GPSPannel:
         x = self.map_size[1] * (gps_pos[1] - self.top_left[1]) / ( self.bottom_right[1] - self.top_left[1])
         return (y,x)
 
-    def plot_point(self, lat, lon, color):
-        r = 3
+    def plot_point(self, lat, lon, radius, color):
+        r = radius
         y,x = self.gps_to_map( (lat, lon) )
         # print x,y
+
         return self.canvas.create_oval( x + r, y +r , x -r , y-r, fill=color)
 
     def del_point(self, point):
@@ -171,6 +179,7 @@ class GPSPannel:
 
     def plot_numeric_point(self):
         self.new_point(float(self.e1.get()), float(self.e2.get()))
+        self.plot_selected_point(float(self.e1.get()), float(self.e2.get()))
 
     def new_point(self, lat, lon):
 
@@ -178,12 +187,25 @@ class GPSPannel:
         # if self.pub_pt is not None:
         #    self.del_point(self.pub_pt)
 
-        self.pub_pt = self.plot_point(lat, lon, 'cyan')
-        self.listbox.insert("end", "Point " + str(self.numPoints + 1))
+        self.pub_pt = self.plot_point(lat, lon, 3, 'cyan')
+        self.listbox.insert("end", str(self.lat_new) + ":" + str(self.lon_new))
         self.numPoints += 1
 
+    def plot_selected_point(self, lat, lon):
+        self.lat_selected = lat
+        self.lon_selected = lon
+        if self.selected_pt is not None:
+            self.del_point(self.selected_pt)
+
+        self.selected_pt = self.plot_point(lat, lon, 8, 'purple')
 
 
+class Point:
+    def __init__(self, title, latitude, longitude, plotpoint):
+        self.title = title
+        self.latitude = latitude
+        self.longitude = longitude
+        self.plotPoint = plotpoint
 
 if __name__ == "__main__":
     a = GPSPannel()
