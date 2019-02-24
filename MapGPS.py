@@ -62,7 +62,7 @@ class GPSPannel:
         self.listbox = tk.Listbox(self.root)
         self.scrollbar = tk.Scrollbar(self.root, orient="vertical")
         self.scrollbar.config(command=self.listbox.yview)
-        self.scrollbar.grid(row=6, column=0)
+        self.scrollbar.grid(row=4, column=0)
 
 
         ### label display
@@ -83,6 +83,7 @@ class GPSPannel:
         tk.Button(self.root, text='Create Point',command=self.plot_numeric_point).grid(row=0, column=4)
 
         ### point library display
+        self.pointLibrary = {}
         tk.Label(self.root, text="Point Library").grid(row=1, column=0)
         self.listbox.grid(row=2, column=0)
         # tk.Button(self.root, text='Delete Point', command=self.del_point(self.selected_pt)).grid(row=5, column=0)
@@ -101,10 +102,10 @@ class GPSPannel:
         self.root.mainloop()
 
     def update(self):
-        self.items = map(int, self.listbox.curselection())
+        self.items = self.listbox.curselection()
         for i in self.items:
-            coordinates = self.listbox.get(i).split(":", 2)
-            self.plot_selected_point(float(coordinates[0]), float(coordinates[1]))
+            title = self.listbox.get(i)
+            self.selected_pt = self.plot_selected_point(self.pointLibrary[title]["latitude"], self.pointLibrary[title]["longitude"])
 
         try:
             rover = self.gps.get()
@@ -152,8 +153,7 @@ class GPSPannel:
         self.lat_click, self.lon_click = self.map_to_gps(event.x, event.y)
 
         self.new_point(self.lat_click, self.lon_click)
-        self.plot_selected_point(self.lat_click, self.lon_click)
-
+        self.selected_pt = self.plot_selected_point(self.lat_click, self.lon_click)
 
     def gps_to_map(self, gps_pos):
         # y = lat = 0
@@ -167,7 +167,7 @@ class GPSPannel:
         y,x = self.gps_to_map( (lat, lon) )
         # print x,y
 
-        return self.canvas.create_oval( x + r, y +r , x -r , y-r, fill=color)
+        return self.canvas.create_oval( x + r, y + r , x - r , y - r, fill=color)
 
     def del_point(self, point):
         self.canvas.delete(point)
@@ -186,18 +186,25 @@ class GPSPannel:
         self.lat_new, self.lon_new = lat, lon
         # if self.pub_pt is not None:
         #    self.del_point(self.pub_pt)
-
         self.pub_pt = self.plot_point(lat, lon, 3, 'cyan')
-        self.listbox.insert("end", str(self.lat_new) + ":" + str(self.lon_new))
+        self.pub_pt = Point("Point " + str(self.numPoints), self.lat_new, self.lon_new, self.pub_pt)
+        self.listbox.insert("end", self.pub_pt.title)
+        localPoint = {"plotPoint" : self.pub_pt,
+                      "latitude" : self.pub_pt.latitude,
+                      "longitude" : self.pub_pt.longitude,
+                      }
+        self.pointLibrary[self.pub_pt.title] = localPoint
         self.numPoints += 1
 
     def plot_selected_point(self, lat, lon):
         self.lat_selected = lat
         self.lon_selected = lon
         if self.selected_pt is not None:
-            self.del_point(self.selected_pt)
+            self.del_point(self.selected_pt.plotPoint)
 
         self.selected_pt = self.plot_point(lat, lon, 8, 'purple')
+        self.selected_pt = Point("Point " + str(self.numPoints), self.lat_selected, self.lon_selected, self.selected_pt)
+        return self.selected_pt
 
 
 class Point:
