@@ -19,10 +19,13 @@ class App:
 
 
         self.window.bind("<space>", lambda e:self.send_command(0) )
-        self.window.bind("w", lambda e:self.send_command(2) )
-        self.window.bind("s", lambda e:self.send_command(1) )
+        self.window.bind("w", lambda e:self.send_command(1) )
+        self.window.bind("s", lambda e:self.send_command(2) )
         self.window.bind("a", lambda e:self.send_command(3) )
         self.window.bind("d", lambda e:self.send_command(4) )
+
+        self.window.bind("z", lambda e:self.send_command(13) )
+        self.window.bind("x", lambda e:self.send_command(14) )
 
         # self.window.bind("<KeyRelease-w>", lambda e:self.send_command(0) )
         # self.window.bind("<space>", lambda e:self.send_command(0) )
