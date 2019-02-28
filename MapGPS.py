@@ -12,16 +12,6 @@ from UDPComms import timeout
 from math import sin,cos,pi
 
 
-
-# zoomed out
-# top left: 37.432565, -122.180000
-# bottom right: 37.421642, -122.158724
-
-# zoomed in:
-# top left:37.430638, -122.176173
-# bottom right:  37.426803, -122.168855
-
-
 class Map:
     def __init__(self, fil, size, top_left, bottom_right):
         self.file = fil
@@ -36,25 +26,60 @@ class Obstacle:
         self.radius = radius
 
 class Point:
-    def __init__(self, title, latitude, longitude, plotpoint):
-        self.title = title
-        self.latitude = latitude
-        self.longitude = longitude
-        self.plotPoint = plotpoint
-        ### self.smaller_map = self.map.zoom(2, 2).subsample(3, 3)
-        ### self.smaller_map = self.map.subsample(2, 2)
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def from_gps(cls, mp, lat,lon):
+        point = cls()
+        point.map = mp
+        point.latitude = lat
+        point.longitude = lon
+        point.plot = None
+        return point
 
+    @classmethod
+    def from_map(cls, mp, x,y):
+        point = cls()
+        point.map = mp
+        point.latitude = (y * (mp.bottom_right[0] - mp.top_left[0]) / (mp.size[0])) + mp.top_left[0]
+        point.longitude = (x * (mp.bottom_right[1] - mp.top_left[1]) / (mp.size[1])) + mp.top_left[1]
+        point.plot = None
+        return point
+
+    @classmethod
+    def from_xy(cls, mp, x_m,y_m):
+        pass
+
+    def gps(self):
+        return (self.latitude,self.longitude)
+
+    def map(self):
+        # y = lat = 0
+        # x = lon = 1
+        y = self.map.size[0] * (self.latitude - self.map.top_left[0]) / ( self.map.bottom_right[0] - self.map.top_left[0])
+        x = self.map.size[1] * (self.longitude - self.map.top_left[1]) / ( self.map.bottom_right[1] - self.map.top_left[1])
+        return (y,x)
+
+    def xy(self):
+        pass
 
 class GPSPannel:
 
     def __init__(self):
 
         #### config
-        zoomed = Map('maps/zoomed_small.gif', (949, 1440), 
+        EQuad = Map('maps/zoomed_small.gif', (949, 1440), 
                      (37.430638, -122.176173), (37.426803, -122.168855))
 
         campus = Map('maps/campus.gif', (750, 1160), 
                      (37.432565, -122.180000), (37.421642, -122.158724))
+
+        oval = Map('maps/oval.gif', (949, 1440), 
+                     ((37.432543, -122.170674), (37.429054, -122.167716 ))
+
+        zoomed_oval = Map('maps/zoomed_oval.gif', (750, 1160), 
+                     (37.431282, -122.170513), (37.429127, -122.168238))
 
 
         self.map = campus
@@ -75,7 +100,6 @@ class GPSPannel:
         # publishes the point the robot should be driving to
         self.target_pub = Publisher(8310)
 
-
         # obstacles from the interface, displayed pink trasparent
         self.obstacles = []
         self.obstacles_pub = Publisher(9999)
@@ -89,8 +113,6 @@ class GPSPannel:
 
         ### tkinter setup
         self.root = tk.Tk()
-        self.lat_var = tk.StringVar()
-        self.lon_var = tk.StringVar()
         self.listbox = tk.Listbox(self.root)
         self.scrollbar = tk.Scrollbar(self.root, orient="vertical")
         self.scrollbar.config(command=self.listbox.yview)
@@ -98,21 +120,26 @@ class GPSPannel:
 
 
         ### label display
-        self.lat = tk.Label(self.root, textvariable = self.lat_var)
-        self.lon = tk.Label(self.root, textvariable = self.lon_var)
-
-        self.lat_var.set("Lat: ")
-        self.lon_var.set("Lon: ")
+        self.gps_data = tk.StringVar()
+        tk.Label(self.root, textvariable = self.lat_var).grid()
+        self.gps_data.set("Lat: ")
 
 
         ### numeric input display
-        tk.Label(self.root, text="Latitude").grid(row=0, column=0)
-        tk.Label(self.root, text="Longitude").grid(row=0, column=2)
+        tk.Label(self.root, text="Latitude: ").grid(row=0, column=0)
+        tk.Label(self.root, text="Longitude: ").grid(row=0, column=2)
         self.e1 = tk.Entry(self.root)
         self.e2 = tk.Entry(self.root)
         self.e1.grid(row=0 ,column=1)
         self.e2.grid(row=0, column=3)
+
         tk.Button(self.root, text='Create Point',command=self.plot_numeric_point).grid(row=0, column=4)
+
+        tk.Button(self.root, text='Create Obstacle',command=self.plot_numeric_point).grid(row=0, column=4)
+
+        tk.Button(self.root, text='Plot Course',command=self.plot_numeric_point).grid(row=0, column=4)
+        tk.Button(self.root, text='Run Autonomy',command=self.plot_numeric_point).grid(row=0, column=4)
+        tk.Button(self.root, text='STOP Autonomy',command=self.plot_numeric_point).grid(row=0, column=4)
 
         ### point library display
         self.pointLibrary = {}
@@ -128,8 +155,8 @@ class GPSPannel:
         self.canvas.create_image(0, 0, image=self.map.image, anchor=tk.NW)
 
 
-        # waypoint, obstacle, obstacle_radius
-        self.mouse_mode = "waypoint"
+        # none, waypoint, obstacle, obstacle_radius
+        self.mouse_mode = "none"
         self.canvas.bind("<Button-1>", self.mouse_callback)
 
         self.root.after(50, self.update)
@@ -144,6 +171,7 @@ class GPSPannel:
         else:
             if self.rover_pt is not None:
                 self.del_point(self.rover_pt)
+
             self.rover_pt = self.plot_point(rover['lat'], rover['lon'], 3, '#ff6400')
 
             if rover['local'][0]:
@@ -194,43 +222,32 @@ class GPSPannel:
         print "clicked at", event.x, event.y
 
         if self.mouse_mode == "waypoint":
-            self.map_to_gps(event.x, event.y)
             self.lat_click, self.lon_click = self.map_to_gps(event.x, event.y)
 
             self.new_point(self.lat_click, self.lon_click)
             self.selected_pt = self.plot_selected_point(self.lat_click, self.lon_click)
 
         elif self.mouse_mode == "obstacle":
+            self.map_to_gps(event.x, event.y)
             pass
             self.mouse_mode = "obstacle_radius"
 
         elif self.mouse_mode == "obstacle_radius":
+            self.map_to_gps(event.x, event.y)
             pass
             self.mouse_mode = "waypoint"
         else:
             print "ERROR"
 
-    def gps_to_map(self, gps_pos):
-        # y = lat = 0
-        # x = lon = 1
-        y = self.map.size[0] * (gps_pos[0] - self.top_left[0]) / ( self.bottom_right[0] - self.top_left[0])
-        x = self.map.size[1] * (gps_pos[1] - self.top_left[1]) / ( self.bottom_right[1] - self.top_left[1])
-        return (y,x)
-
-    def plot_point(self, lat, lon, radius, color):
+    def plot_point(self, point, radius, color):
+        if point.plot != None:
+            self.del_point(point)
         r = radius
-        y,x = self.gps_to_map( (lat, lon) )
-        # print x,y
-
-        return self.canvas.create_oval( x + r, y + r , x - r , y - r, fill=color)
+        y,x = point.map()
+        point.plot = self.canvas.create_oval( x + r, y + r , x - r , y - r, fill=color)
 
     def del_point(self, point):
-        self.canvas.delete(point)
-
-    def map_to_gps(self, x, y):
-        lat_click = (y * (self.bottom_right[0] - self.top_left[0]) / (self.map.size[0])) + self.top_left[0]
-        lon_click = (x * (self.bottom_right[1] - self.top_left[1]) / (self.map.size[1])) + self.top_left[1]
-        return lat_click, lon_click
+        self.canvas.delete(point.plot)
 
     def plot_numeric_point(self):
         self.new_point(float(self.e1.get()), float(self.e2.get()))
