@@ -9,7 +9,7 @@ from UDPComms import Subscriber
 from UDPComms import Publisher
 from UDPComms import timeout
 
-from math import sin,cos,pi
+from math import sin,cos,pi,sqrt
 
 
 class Map:
@@ -23,7 +23,7 @@ class Map:
 class Obstacle:
     def __init__(self, location, radius):
         self.location = location
-        self.radius = radius
+        self.radius   = radius
 
 class Point:
     def __init__(self):
@@ -32,7 +32,7 @@ class Point:
     @classmethod
     def from_gps(cls, mp, lat,lon):
         point = cls()
-        point.map = mp
+        point._map = mp
         point.latitude = lat
         point.longitude = lon
         point.plot = None
@@ -41,7 +41,7 @@ class Point:
     @classmethod
     def from_map(cls, mp, x,y):
         point = cls()
-        point.map = mp
+        point._map = mp
         point.latitude = (y * (mp.bottom_right[0] - mp.top_left[0]) / (mp.size[0])) + mp.top_left[0]
         point.longitude = (x * (mp.bottom_right[1] - mp.top_left[1]) / (mp.size[1])) + mp.top_left[1]
         point.plot = None
@@ -57,8 +57,8 @@ class Point:
     def map(self):
         # y = lat = 0
         # x = lon = 1
-        y = self.map.size[0] * (self.latitude - self.map.top_left[0]) / ( self.map.bottom_right[0] - self.map.top_left[0])
-        x = self.map.size[1] * (self.longitude - self.map.top_left[1]) / ( self.map.bottom_right[1] - self.map.top_left[1])
+        y = self._map.size[0] * (self.latitude - self._map.top_left[0]) / ( self._map.bottom_right[0] - self._map.top_left[0])
+        x = self._map.size[1] * (self.longitude - self._map.top_left[1]) / ( self._map.bottom_right[1] - self._map.top_left[1])
         return (y,x)
 
     def xy(self):
@@ -124,8 +124,7 @@ class GPSPannel:
         ### label display
         self.gps_data = tk.StringVar()
         tk.Label(self.root, textvariable = self.gps_data).grid(row=8, column=0, columnspan =6)
-        self.gps_data.set("Lat: ")
-
+        self.gps_data.set("")
 
         ### numeric input display
         tk.Label(self.root, text="Lat: ").grid(row=0, column=1)
@@ -136,12 +135,13 @@ class GPSPannel:
         self.e2.grid(row=0, column=4)
         tk.Button(self.root, text='Create Point',command=self.plot_numeric_point).grid(row=0, column=5)
 
-        tk.Button(self.root, text='Waypoint',command=lambda: self.change_mouse_mode('waypoint') ).grid(row=2, column=0)
-        tk.Button(self.root, text='Obstacle',command=lambda: self.change_mouse_mode('obstacle')).grid(row=3, column=0)
+        tk.Button(self.root, text='Waypoint',   command=lambda: self.change_mouse_mode('waypoint') ).grid(row=2, column=0)
+        tk.Button(self.root, text='Obstacle',   command=lambda: self.change_mouse_mode('obstacle') ).grid(row=3, column=0)
+        self.root.bind("<Escape>",                      lambda: self.change_mouse_mode('obstacle'))
 
-        tk.Button(self.root, text='Plot Course',command=lambda: self.change_mouse_mode('plot')).grid(row=4, column=0)
-        tk.Button(self.root, text='Auto',command=lambda: self.change_mouse_mode('auto')).grid(row=5, column=0)
-        tk.Button(self.root, text='STOP',command=lambda: self.change_mouse_mode('off')).grid(row=6, column=0)
+        tk.Button(self.root, text='Plot Course',command=lambda: self.change_auto_mode('plot')).grid(row=4, column=0)
+        tk.Button(self.root, text='Auto',       command=lambda: self.change_auto_mode('auto')).grid(row=5, column=0)
+        tk.Button(self.root, text='STOP',       command=lambda: self.change_auto_mode('off')).grid(row=6, column=0)
 
         ### point library display
         self.pointLibrary = {}
@@ -167,7 +167,9 @@ class GPSPannel:
         self.root.mainloop()
 
     def change_mouse_mode(self,mode):
+        print('chaing', mode)
         self.mouse_mode = mode
+        print('chaing', self.mouse_mode)
 
     def change_auto_mode(self,mode):
         assert (mode == "off") or (mode == 'auto') or (mode == 'plot')
@@ -180,10 +182,8 @@ class GPSPannel:
         except timeout:
             print("GPS TIMED OUT")
         else:
-            if self.rover_pt is not None:
-                self.del_point(self.rover_pt)
-
-            self.rover_pt = self.plot_point(rover['lat'], rover['lon'], 3, '#ff6400')
+            self.rover_pt = Point.from_gps(self.map, rover['lat'], rover['lon'])
+            self.plot_point(self.rover_pt, 3, '#ff6400')
 
             if rover['local'][0]:
                 print("x", rover['local'][1], "y", rover['local'][2])
@@ -194,21 +194,22 @@ class GPSPannel:
             pass
             print("GPSBase TIMED OUT")
         else:
-            if self.base_pt is not None:
-                self.del_point(self.base_pt)
-            self.base_pt = self.plot_point(base['lat'], base['lon'], 3, '#ff0000')
+            self.base_pt = Point.from_gps(self.map, base['lat'], base['lon'])
+            self.plot_point(self.base_pt, 3, '#ff0000')
 
             
         if self.arrow is not None:
             self.canvas.delete(self.arrow)
-
-
-        angle = self.gyro.get()['angle'][0]
-        y,x = self.gps_to_map( (rover['lat'], rover['lon']) )
-        r = 20
-        self.arrow = self.canvas.create_line(x, y, x + r*sin(angle * pi/180),
-                                                   y - r*cos(angle * pi/180),
-                                                      arrow=tk.LAST)
+        try:
+            angle = self.gyro.get()['angle'][0]
+        except:
+            pass
+        else:
+            y,x = self.rover_pt.map()
+            r = 20
+            self.arrow = self.canvas.create_line(x, y, x + r*sin(angle * pi/180),
+                                                       y - r*cos(angle * pi/180),
+                                                          arrow=tk.LAST)
 
     def update_listbox(self):
         self.items = self.listbox.curselection()
@@ -218,32 +219,35 @@ class GPSPannel:
 
 
     def update(self):
-        self.update_listbox()
-        self.update_rover()
+        try:
+            self.gps_data.set(self.mouse_mode)
 
-        if self.pub_pt is not None:
-            self.target_pub.send([self.lat_selected, self.lon_selected] )
+            self.update_listbox()
+            self.update_rover()
 
-        self.obstacles_pub.send(self.obstacles)
-
-        self.root.after(50, self.update)
+            self.auto_control_pub.send(self.auto_control)
+            self.obstacles_pub.send(self.obstacles)
+        except:
+            raise
+        finally:
+            self.root.after(50, self.update)
 
 
     def mouse_callback(self, event):
         print "clicked at", event.x, event.y
 
         if self.mouse_mode == "waypoint":
-            waypoint = Point.from_map(event.x, event.y)
+            waypoint = Point.from_map(self.map, event.x, event.y)
             self.new_waypoint(self.lat_click, self.lon_click)
             self.mouse_mode = "none"
 
         elif self.mouse_mode == "obstacle":
-            self.temp_obstace = Point.from_map(event.x, event.y)
+            self.temp_obstace = Point.from_map(self.map, event.x, event.y)
             self.mouse_mode = "obstacle_radius"
 
         elif self.mouse_mode == "obstacle_radius":
             assert self.temp_obstace != None
-            edge_point = Point.from_map(event.x, event.y)
+            edge_point = Point.from_map(self.map, event.x, event.y)
             y,x = edge_point.map()
             center_y, center_x = self.temp_obstace.map()
             radius = sqrt((center_x-x)**2 + (center_y-y)**2)
@@ -252,7 +256,11 @@ class GPSPannel:
             self.obstacles.append(self.temp_obstace)
             self.temp_obstace = None
 
-            self.mouse_mode = "waypoint"
+            self.mouse_mode = "none"
+
+        elif self.mouse_mode == "none":
+            print "nothing to do"
+
         else:
             print "ERROR"
 
@@ -267,7 +275,7 @@ class GPSPannel:
         self.canvas.delete(point.plot)
 
     def plot_numeric_point(self):
-        new_numeric = Point.from_gps(float(self.e1.get()), float(self.e2.get()))
+        new_numeric = Point.from_gps(self.map, float(self.e1.get()), float(self.e2.get()))
         self.new_waypoint(new_numeric)
 
     def new_waypoint(self, point):
