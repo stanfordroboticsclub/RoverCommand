@@ -11,6 +11,9 @@ from UDPComms import timeout
 
 from math import sin,cos,pi,sqrt
 
+from Queue import PriorityQueue
+from collections import defaultdict
+
 
 class Map:
     def __init__(self, fil, size, top_left, bottom_right):
@@ -67,6 +70,62 @@ class Point:
     def xy(self):
         pass
 
+
+class AStar:
+
+    def __init__(self, start, end, neigbour, heuristic):
+        self.start = start
+        self.end = end
+        self.neigbour = neigbour
+        self.heuristic = heuristic
+
+        self.queue = PriorityQueue()
+        self.queue.put(( heuristic(start,end), self.start))
+
+        self.visited = set()
+
+        self.came_from = {}
+
+        self.gscore = defaultdict(float("inf"))
+        self.gscore[self.start] = 0
+
+        self.fscore = defaultdict(float("inf"))
+        self.fscore[self.start] = heuristic(start,end)
+
+
+    def run():
+        while not self.queue.empty():
+            current = self.queue.get()
+            if current == self.end:
+                return reconstruct_path(current)
+
+            self.visited.add(current)
+            for neigbour in self.neigbour(current):
+                if neigbour in self.visited:
+                    continue
+                tentative_gscore = self.gscore[current] + 1
+
+                if neigbour not in self.visited:
+                    self.queue.put(  ( self.heuristic(neigbour,self.end),  neigbour) )
+                elif tentative_gscore >= gscore[neigbour]:
+                    continue
+
+                self.came_from[neigbour] = current
+                self.gscore[neigbour] = tentative_gscore
+                self.fscore[neigbour] = tentative_gscore + heuristic(neigbour, self.end)
+
+    def reconstruct_path(self,current):
+        total_path = [current]
+        while current is self.came_from.keys():
+            current = self.came_from[current]
+            total_path.append(current)
+
+        return total_path
+
+
+
+
+
 class GPSPannel:
 
     def __init__(self):
@@ -99,8 +158,8 @@ class GPSPannel:
 
         # publishes the point the robot should be driving to
         self.auto_control  = {"target": {"lat":0, "lon":0}, "command":"off"}
+        self.auto_control_pt = None
         self.auto_control_pub = Publisher(8310)
-        self.pub_pt = None
 
         # the path the autonomous module has chosen, drawn as blue lines
         self.path_sub = Subscriber(8320, timeout = 5)
@@ -110,7 +169,7 @@ class GPSPannel:
         self.obstacles_pub = Publisher(8330)
 
         # obstacles from the robots sensors, displayed red tranparent.
-        self.auto_obstacle_sub = Publisher(8340)
+        self.auto_obstacle_sub = Subscriber(8340, timeout=5)
 
 
 
@@ -179,6 +238,30 @@ class GPSPannel:
         self.auto_control['command'] = mode
 
 
+    def plot_path(self):
+        self.rover_pt.map()
+        self.auto_control_point
+        
+
+
+
+    def update_path(self):
+        for line in self.path_lines:
+            self.canvas.delete(line)
+        self.path_lines = []
+        try:
+            path = self.path_sub.get()
+        except timeout:
+            pass
+        else:
+            points = [ Point.from_gps(self.map, p['lat'], p['lon']) for p in path]
+            for a,b in zip( points[:-1], points[1:]):
+                y1, x1 = a.map()
+                y2, x2 = b.map()
+                line = self.canvas.create_line(x1,x2,y1,y2, color='red')
+                self.path_lines.append(line)
+
+
     def update_rover(self):
         try:
             rover = self.gps.get()
@@ -225,25 +308,10 @@ class GPSPannel:
             if i in self.listbox.curselection():
                 self.plot_selected_point(point)
                 self.auto_control['target'] = {'lat': point.gps()[0], 'lon':point.gps()[1]}
+                self.auto_control_pt = point
             else:
                 self.plot_normal_point(point)
 
-
-    def update_path(self):
-        for line in self.path_lines:
-            self.canvas.delete(line)
-        self.path_lines = []
-        try:
-            path = self.path_sub.get()
-        except timeout:
-            pass
-        else:
-            points = [ Point.from_gps(self.map, p['lat'], p['lon']) for p in path]
-            for a,b in zip( points[:-1], points[1:]):
-                y1, x1 = a.map()
-                y2, x2 = b.map()
-                line = self.canvas.create_line(x1,x2,y1,y2, color='red')
-                self.path_lines.append(line)
 
 
     def update(self):
