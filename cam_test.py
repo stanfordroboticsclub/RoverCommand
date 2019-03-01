@@ -1,5 +1,6 @@
 import tkinter
 import cv2
+import numpy as np
 import PIL.Image, PIL.ImageTk
 import time
 import requests
@@ -54,13 +55,19 @@ class App:
 
     def find_ball(self, frame):
         frame_hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
-        candidate_mask = cv2.inRange(hsv, (36, 10, 10), (70, 220,220))
-        cv2.medianBlur(img,5)
+        candidate_mask = cv2.inRange(frame_hsv, (80, 0, 0), (110, 250,250))
+        candidate_mask = cv2.medianBlur(candidate_mask, 5)
 
         circles = cv2.HoughCircles(candidate_mask, cv2.HOUGH_GRADIENT,
-            dp=1, minDist=20, param1=50, param2=30, minRadius=20, maxRadius=100)
+            dp=2, minDist=50, param1=100, param2=60, minRadius=10, maxRadius=150)
+
+        if circles is None:
+            return candidate_mask
 
         circles = np.uint16(np.around(circles))
+        
+        if len(circles) < 1:
+            return frame
         frame_annotated = frame
         for x, y, r in circles[0,:]:
             # draw bounding circle
@@ -83,7 +90,7 @@ class App:
         ret, frame = self.vid.get_frame()
 
         if ret:
-            frame_annotated = find_ball(frame)
+            frame_annotated = self.find_ball(frame)
             self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame_annotated))
             self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
 
