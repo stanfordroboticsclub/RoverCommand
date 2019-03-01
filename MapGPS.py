@@ -87,15 +87,11 @@ class GPSPannel:
 
         self.map = campus
 
-
-        self.selected_pt = None
-
-
         ## UDPComms
         self.gps  = Subscriber(8280, timeout=2)
         self.rover_pt = None
 
-        self.gyro = Subscriber(8870, timeout=1)
+        self.gyro = Subscriber(8220, timeout=1)
         self.arrow = None
 
         self.gps_base = Subscriber(8290, timeout=2)
@@ -106,15 +102,16 @@ class GPSPannel:
         self.auto_control_pub = Publisher(8310)
         self.pub_pt = None
 
+        # the path the autonomous module has chosen, drawn as blue lines
+        self.path_sub = Subscriber(8320, timeout = 5)
+
         # obstacles from the interface, displayed pink trasparent
         self.obstacles = []
-        self.obstacles_pub = Publisher(9999)
+        self.obstacles_pub = Publisher(8330)
 
         # obstacles from the robots sensors, displayed red tranparent.
-        self.auto_obstacle_sub = Publisher(9999)
+        self.auto_obstacle_sub = Publisher(8340)
 
-        # the path the autonomous module has chosen, drawn as blue lines
-        self.path_sub = Subscriber(9999)
 
 
         ### tkinter setup
@@ -231,6 +228,24 @@ class GPSPannel:
             else:
                 self.plot_normal_point(point)
 
+
+    def update_path(self):
+        for line in self.path_lines:
+            self.canvas.delete(line)
+        self.path_lines = []
+        try:
+            path = self.path_sub.get()
+        except timeout:
+            pass
+        else:
+            points = [ Point.from_gps(self.map, p['lat'], p['lon']) for p in path]
+            for a,b in zip( points[:-1], points[1:]):
+                y1, x1 = a.map()
+                y2, x2 = b.map()
+                line = self.canvas.create_line(x1,x2,y1,y2, color='red')
+                self.path_lines.append(line)
+
+
     def update(self):
         try:
             self.auto_mode_dis.set(self.auto_control['command'].upper())
@@ -238,9 +253,10 @@ class GPSPannel:
 
             self.update_listbox()
             self.update_rover()
+            self.update_path()
 
             self.auto_control_pub.send(self.auto_control)
-            # self.obstacles_pub.send(self.obstacles)
+            self.obstacles_pub.send(map(lambda x:x.serialize(), self.obstacles))
         except:
             raise
         finally:
