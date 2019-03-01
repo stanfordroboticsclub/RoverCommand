@@ -15,6 +15,9 @@ from Queue import PriorityQueue
 from collections import defaultdict
 
 
+import networkx as nx
+
+
 class Map:
     def __init__(self, fil, size, top_left, bottom_right):
         self.file = fil
@@ -92,31 +95,42 @@ class AStar:
         self.fscore = defaultdict(lambda: float("inf"))
         self.fscore[self.start] = heuristic(start,end)
 
-
     def run(self):
+        # self.visit = []
         while not self.queue.empty():
             current = self.queue.get()[1]
+            # if current in self.visit:
+            #     raise
+            # self.visit.append(current)
+            print(current)
+            # print('current',current, self.queue.qsize)
             if current == self.end:
-                return reconstruct_path(current)
+                return self.reconstruct_path(current)
 
             self.visited.add(current)
             for neigbour in self.neigbour(current):
+                # print('neigbour',neigbour)
+                # print("visting neoughtou")
                 if neigbour in self.visited:
+                    # print("in visited")
                     continue
                 tentative_gscore = self.gscore[current] + 1
 
-                if neigbour not in self.visited:
-                    self.queue.put(  ( self.heuristic(neigbour,self.end),  neigbour) )
+                if neigbour not in self.queue.queue:
+                    # print("adding to queu", neigbour)
+                    self.queue.put(  (self.heuristic(neigbour,self.end),  neigbour) )
+                    # print "ADDing", neigbour
                 elif tentative_gscore >= gscore[neigbour]:
                     continue
 
                 self.came_from[neigbour] = current
                 self.gscore[neigbour] = tentative_gscore
-                self.fscore[neigbour] = tentative_gscore + heuristic(neigbour, self.end)
+                self.fscore[neigbour] = tentative_gscore + self.heuristic(neigbour, self.end)
 
     def reconstruct_path(self,current):
+        print("PATH RECPNST")
         total_path = [current]
-        while current is self.came_from.keys():
+        while current != self.start:
             current = self.came_from[current]
             total_path.append(current)
 
@@ -140,10 +154,11 @@ class GPSPannel:
         # oval = Map('maps/oval.gif', (1, 1), \
         #              (37.432543, -122.170674), (37.429054, -122.167716 ))
 
-        zoomed_oval = Map('maps/zoomed_oval.gif', (1936, 1616), \
+        zoomed_oval = Map('maps/zoomed_oval_copy.gif', (1936/2, 1616/2), \
                      (37.431282, -122.170513), (37.429127, -122.168238))
 
 
+        # self.map = zoomed_oval
         self.map = zoomed_oval
 
         ## UDPComms
@@ -238,39 +253,77 @@ class GPSPannel:
 
     def change_auto_mode(self,mode):
         assert (mode == "off") or (mode == 'auto') or (mode == 'plot')
+        if mode == 'plot':
+            self.update_path2()
         self.auto_control['command'] = mode
 
 
-    def find_neighbours(self, coords):
-        x,y = coords
-        for i,j in ((1,1), (-1,1), (1,-1), (-1,-1)):
-            new_x = x+i
-            new_y = y+j
-            # if 
+    def update_path2(self):
+        print((self.map.size[0],self.map.size[1]))
+        nx.grid_graph(dim=[self.map.size[0],self.map.size[1]])
 
-    def update_path(self):
 
-        #TODO: time limmmtingin
 
-        start = self.rover_pt.map()
-        end = self.auto_control_pt.map()
+    #def update_path(self):
+
+
+    #    #TODO: time limmmtingin
+
+    #        # margin = 10
+    #        # obstacles = []
+    #        # for ob in[Obstacle(x.location,x.radius+margin) for x in self.obstacles]:
+    #        #     self.canvas.cr
+
+    #    def collides(x,y):
+    #        if x<=0: return True
+    #        if y<=0: return True
+
+    #        if x>=self.map.size[0]: return True
+    #        if y>=self.map.size[1]: return True
+
+    #        ids = self.canvas.find_overlapping(x,y, x+1, y+1)
+    #        print(len(ids))
+    #        for i in ids:
+    #            if i in [x.location.point for x in self.obstacles]:
+    #                return True
+    #        return False
+
+    #    def find_neighbours(coords):
+    #        y,x = coords
+    #        out = []
+    #        for i,j in ((1,1), (-1,1), (1,-1), (-1,-1)):
+    #            new_x = x+i
+    #            new_y = y+j
+    #            # if not collides(x,y):
+    #            out.append((new_y, new_x))
+
+    #        # print(out)
+    #        return out
+
+    #    dist = lambda a,b: sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2)
+
+    #    start = self.rover_pt.map()
+    #    end = self.auto_control_pt.map()
         
-        As = AStar(start, end, lambda a: self.find_neighbours(a), \
-              lambda a,b: sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2))
-        path = As.run()
+    #    print("running act")
+    #    As = AStar(start, end, find_neighbours, dist)
+    #    path = As.run()
+    #    print("ran act")
 
-        # TODO Stragihtend path
+    #    # TODO Stragihtend path
 
-        for pl in self.path_lines:
-            self.canvas.delete(pl)
+    #    print path
 
-        self.path_lines = []
-        points = [ Point.from_map(self.map, p[0], p[0]) for p in path]
-        for a,b in zip( points[:-1], points[1:]):
-            y1, x1 = a.map()
-            y2, x2 = b.map()
-            line = self.canvas.create_line(x1,x2,y1,y2, color='red')
-            self.path_lines.append(line)
+    #    for pl in self.path_lines:
+    #        self.canvas.delete(pl)
+
+    #    self.path_lines = []
+    #    points = [ Point.from_map(self.map, p[0], p[1]) for p in path]
+    #    for a,b in zip( points[:-1], points[1:]):
+    #        y1, x1 = a.map()
+    #        y2, x2 = b.map()
+    #        line = self.canvas.create_line(x1,x2,y1,y2, color='red')
+    #        self.path_lines.append(line)
 
 
 
@@ -333,7 +386,7 @@ class GPSPannel:
 
             self.update_listbox()
             self.update_rover()
-            self.update_path()
+            # self.update_path()
 
             self.auto_control_pub.send(self.auto_control)
             self.obstacles_pub.send(map(lambda x:x.serialize(), self.obstacles))
