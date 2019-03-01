@@ -46,13 +46,23 @@ while True:
     circle  = (pygame.joystick.Joystick(0).get_button(2))
     triangle  = (pygame.joystick.Joystick(0).get_button(3))
 
+    print("button")
+    for i in range(14):
+        print(i, pygame.joystick.Joystick(0).get_button(i))
+    print("axis")
+    for i in range(12):
+        print(i, pygame.joystick.Joystick(0).get_axis(i))
+
+    hat = pygame.joystick.Joystick(0).get_hat(0)
+
     target_vel = {"x": r_side,
                   "y": r_forward,
                   "z": (r_trigger - l_trigger)/2,
                   "yaw": l_side,
                   "pitch": l_forward,
                   "roll": (r_shoulder - l_shoulder),
-                  "grip": cross - square}
+                  "grip": cross - square,
+                  "hat": hat}
 
     print(target_vel)
     arm_vel.send(target_vel)
