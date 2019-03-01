@@ -52,6 +52,24 @@ class App:
         requests.post(url, data, auth=('admin','admin'))
 
 
+    def find_ball(self, frame):
+        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
+        candidate_mask = cv2.inRange(hsv, (36, 10, 10), (70, 220,220))
+        cv2.medianBlur(img,5)
+
+        circles = cv2.HoughCircles(candidate_mask, cv2.HOUGH_GRADIENT,
+            dp=1, minDist=20, param1=50, param2=30, minRadius=20, maxRadius=100)
+
+        circles = np.uint16(np.around(circles))
+        frame_annotated = frame
+        for x, y, r in circles[0,:]:
+            # draw bounding circle
+            cv2.circle(frame_annotated, (x, y), r, (0,255,0), 2)
+            # plot a point at centroid
+            cv2.circle(frame_annotated, (x, y), 3, (0,0,255), 3)
+
+        return frame_annotated
+
 
     def snapshot(self):
         # Get a frame from the video source
@@ -65,7 +83,8 @@ class App:
         ret, frame = self.vid.get_frame()
 
         if ret:
-            self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame))
+            frame_annotated = find_ball(frame)
+            self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame_annotated))
             self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
 
         self.window.after(self.delay, self.update)
