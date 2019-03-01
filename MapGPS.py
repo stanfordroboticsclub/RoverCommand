@@ -175,10 +175,11 @@ class GPSPannel:
         # publishes the point the robot should be driving to
         self.auto_control  = {"target": {"lat":0, "lon":0}, "command":"off"}
         self.auto_control_pt = None
-        self.auto_control_pub = Publisher(8310)
+        # self.auto_control_pub = Publisher(8310)
 
         # the path the autonomous module has chosen, drawn as blue lines
-        self.path_sub = Subscriber(8320, timeout = 5)
+        self.path = None
+        self.path_pub = Publisher(8320)
 
         # obstacles from the interface, displayed pink trasparent
         self.obstacles = []
@@ -259,9 +260,69 @@ class GPSPannel:
 
 
     def update_path2(self):
-        print((self.map.size[0],self.map.size[1]))
-        nx.grid_graph(dim=[self.map.size[0],self.map.size[1]])
 
+        def dist(a,b): 
+            # print('dist', a, b)
+            # print(a.map(), b.map())
+            return sqrt((a.map()[0]-b.map()[0])**2 + (a.map()[1]-b.map()[1])**2)
+
+        start = self.rover_pt
+        end = self.auto_control_pt
+        def octagon(osb):
+            r = obs.radius * 1.6
+            # return ( (0.7*r,0.7*r),(-0.7*r,-0.7*r), \
+            #         (0.7*r,-0.7*r) , (-0.7*r,0.7*r),\
+            #         (0,r),(0,-r), (r,0),(-r,0))
+
+            return ( (0.7*r,0.7*r), (r,0), (0.7*r,-0.7*r), (0, -r), \
+                    (-0.7*r, -0.7*r), (-r, 0), (-0.7*r, 0.7*r), (0,r))
+                    
+
+        possible_point = []
+        for obs in self.obstacles:
+            for u,j in octagon(obs):
+                y,x = obs.location.map()
+                point = Point.from_map(self.map, x+u, y+j)
+                possible_point.append(point)
+
+        # possible_point += [start, end]
+
+        min_start = Point.from_map(self.map, -100000,-100000)
+        min_end   = Point.from_map(self.map, -100000,-100000)
+        start_i = 0
+        end_i = 0
+
+        # print possible_point
+        # print "MIN", min_end, min_start
+
+        for i,x in enumerate(possible_point):
+            # print x, min_start, min_end
+            if dist(x,start) < dist(start,min_start):
+                min_start = x
+                start_i = i
+            if dist(x,  end) < dist(end,  min_end):
+                min_end = x
+                end_i = i
+
+
+        self.path = [start]
+
+        i = start_i
+        while i!= end_i:
+            self.path.append(possible_point[i])
+            i = i+1%len(possible_point)
+
+        self.path.append(end)
+
+        self.plot_point(min_end, 6, 'black')
+        self.plot_point(min_start, 6, 'white')
+
+        self.path_lines = []
+        for a,b in zip( self.path[:-1], self.path[1:]):
+            y1, x1 = a.map()
+            y2, x2 = b.map()
+            line = self.canvas.create_line(x1,y1,x2,y2, fill='blue')
+            self.path_lines.append(line)
 
 
     #def update_path(self):
@@ -388,8 +449,10 @@ class GPSPannel:
             self.update_rover()
             # self.update_path()
 
-            self.auto_control_pub.send(self.auto_control)
-            self.obstacles_pub.send(map(lambda x:x.serialize(), self.obstacles))
+            # self.auto_control_pub.send(self.auto_control)
+            self.path_pub.send([x.gps() for x in self.path])
+
+            # self.obstacles_pub.send(map(lambda x:x.serialize(), self.obstacles))
         except:
             raise
         finally:
