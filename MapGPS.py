@@ -178,7 +178,7 @@ class GPSPannel:
         # self.auto_control_pub = Publisher(8310)
 
         # the path the autonomous module has chosen, drawn as blue lines
-        self.path = None
+        self.path = []
         self.path_pub = Publisher(8320)
 
         # obstacles from the interface, displayed pink trasparent
@@ -314,8 +314,8 @@ class GPSPannel:
 
         self.path.append(end)
 
-        self.plot_point(min_end, 6, 'black')
-        self.plot_point(min_start, 6, 'white')
+        # self.plot_point(min_end, 6, 'black')
+        # self.plot_point(min_start, 6, 'white')
 
         self.path_lines = []
         for a,b in zip( self.path[:-1], self.path[1:]):
