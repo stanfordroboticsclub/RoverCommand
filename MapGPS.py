@@ -24,6 +24,9 @@ class Obstacle:
     def __init__(self, location, radius):
         self.location = location
         self.radius   = radius
+    def serialize(self):
+        gps = self.location.gps()
+        return {"radius": self.radius, "lat": gps.latitude, "lon": gps.longitude}
 
 class Point:
     def __init__(self):
@@ -116,15 +119,20 @@ class GPSPannel:
 
         ### tkinter setup
         self.listbox = tk.Listbox(self.root)
-        self.scrollbar = tk.Scrollbar(self.root, orient="vertical")
-        self.scrollbar.config(command=self.listbox.yview)
-        self.scrollbar.grid(row=1, column=0)
+        # self.scrollbar = tk.Scrollbar(self.root, orient="vertical")
+        # self.scrollbar.config(command=self.listbox.yview)
+        # self.scrollbar.grid(row=1, column=0)
 
 
         ### label display
         self.gps_data = tk.StringVar()
         tk.Label(self.root, textvariable = self.gps_data).grid(row=8, column=0, columnspan =6)
         self.gps_data.set("")
+
+        self.auto_mode_dis = tk.StringVar()
+        tk.Label(self.root, textvariable = self.auto_mode_dis, font=("Courier", 44)).grid(row=0, column=0)
+        self.auto_mode_dis.set("")
+
 
         ### numeric input display
         tk.Label(self.root, text="Lat: ").grid(row=0, column=1)
@@ -135,24 +143,24 @@ class GPSPannel:
         self.e2.grid(row=0, column=4)
         tk.Button(self.root, text='Create Point',command=self.plot_numeric_point).grid(row=0, column=5)
 
-        tk.Button(self.root, text='Waypoint',   command=lambda: self.change_mouse_mode('waypoint') ).grid(row=2, column=0)
-        tk.Button(self.root, text='Obstacle',   command=lambda: self.change_mouse_mode('obstacle') ).grid(row=3, column=0)
-        self.root.bind("<Escape>",                      lambda: self.change_mouse_mode('obstacle'))
+        tk.Button(self.root, text='Delete',     command=lambda: None ).grid(row=2, column=0)
+        tk.Button(self.root, text='Waypoint',   command=lambda: self.change_mouse_mode('waypoint') ).grid(row=3, column=0)
+        tk.Button(self.root, text='Obstacle',   command=lambda: self.change_mouse_mode('obstacle') ).grid(row=4, column=0)
 
-        tk.Button(self.root, text='Plot Course',command=lambda: self.change_auto_mode('plot')).grid(row=4, column=0)
-        tk.Button(self.root, text='Auto',       command=lambda: self.change_auto_mode('auto')).grid(row=5, column=0)
-        tk.Button(self.root, text='STOP',       command=lambda: self.change_auto_mode('off')).grid(row=6, column=0)
+        self.root.bind("<Escape>",                      lambda: self.change_mouse_mode('none'))
+
+        tk.Button(self.root, text='Plot Course',command=lambda: self.change_auto_mode('plot')).grid(row=5, column=0)
+        tk.Button(self.root, text='Auto',       command=lambda: self.change_auto_mode('auto')).grid(row=6, column=0)
+        tk.Button(self.root, text='STOP',       command=lambda: self.change_auto_mode('off')).grid(row=7, column=0)
 
         ### point library display
         self.pointLibrary = {}
-        # tk.Label(self.root, text="Point Library").grid(row=1, column=0)
         self.listbox.grid(row=1, column=0)
-        # tk.Button(self.root, text='Delete Point', command=self.del_point(self.selected_pt)).grid(row=5, column=0)
         self.numPoints = 0;
 
         ### canvas display
         self.canvas=tk.Canvas(self.root, width= self.map.size[1], height= self.map.size[0])
-        self.canvas.grid(row=1, column=1, rowspan=7, columnspan=5)
+        self.canvas.grid(row=1, column=1, rowspan=8, columnspan=5)
 
         self.canvas.create_image(0, 0, image=self.map.image, anchor=tk.NW)
 
@@ -167,9 +175,7 @@ class GPSPannel:
         self.root.mainloop()
 
     def change_mouse_mode(self,mode):
-        print('chaing', mode)
         self.mouse_mode = mode
-        print('chaing', self.mouse_mode)
 
     def change_auto_mode(self,mode):
         assert (mode == "off") or (mode == 'auto') or (mode == 'plot')
@@ -180,7 +186,9 @@ class GPSPannel:
         try:
             rover = self.gps.get()
         except timeout:
-            print("GPS TIMED OUT")
+            pass
+            # print("GPS TIMED OUT")
+            self.gps_data.set("MODE: "+self.mouse_mode+", no gps data recived")
         else:
             self.rover_pt = Point.from_gps(self.map, rover['lat'], rover['lon'])
             self.plot_point(self.rover_pt, 3, '#ff6400')
@@ -188,11 +196,13 @@ class GPSPannel:
             if rover['local'][0]:
                 print("x", rover['local'][1], "y", rover['local'][2])
 
+            self.gps_data.set("MODE: "+self.mouse_mode+", "+ str(rover) )
+
         try:
             base =  self.gps_base.get()
         except timeout:
             pass
-            print("GPSBase TIMED OUT")
+            # print("GPSBase TIMED OUT")
         else:
             self.base_pt = Point.from_gps(self.map, base['lat'], base['lon'])
             self.plot_point(self.base_pt, 3, '#ff0000')
@@ -212,21 +222,25 @@ class GPSPannel:
                                                           arrow=tk.LAST)
 
     def update_listbox(self):
-        self.items = self.listbox.curselection()
-        for i in self.items:
+        for i in range(self.numPoints):
             title = self.listbox.get(i)
-            self.selected_pt = self.plot_selected_point(self.pointLibrary[title]["latitude"], self.pointLibrary[title]["longitude"])
-
+            point = self.pointLibrary[title] 
+            if i in self.listbox.curselection():
+                self.plot_selected_point(point)
+                self.auto_control['target'] = {'lat': point.gps()[0], 'lon':point.gps()[1]}
+            else:
+                self.plot_normal_point(point)
 
     def update(self):
         try:
+            self.auto_mode_dis.set(self.auto_control['command'].upper())
             self.gps_data.set(self.mouse_mode)
 
             self.update_listbox()
             self.update_rover()
 
             self.auto_control_pub.send(self.auto_control)
-            self.obstacles_pub.send(self.obstacles)
+            # self.obstacles_pub.send(self.obstacles)
         except:
             raise
         finally:
@@ -238,7 +252,7 @@ class GPSPannel:
 
         if self.mouse_mode == "waypoint":
             waypoint = Point.from_map(self.map, event.x, event.y)
-            self.new_waypoint(self.lat_click, self.lon_click)
+            self.new_waypoint(waypoint)
             self.mouse_mode = "none"
 
         elif self.mouse_mode == "obstacle":
@@ -252,8 +266,11 @@ class GPSPannel:
             center_y, center_x = self.temp_obstace.map()
             radius = sqrt((center_x-x)**2 + (center_y-y)**2)
 
-            self.plot_point(self.temp_obstace, radius, "#FFFFFF", stipple='gray50')
-            self.obstacles.append(self.temp_obstace)
+            self.plot_point(self.temp_obstace, radius, "#FF0000", activestipple='gray50',  width=0)
+
+            DIS_SCALE = 1
+
+            self.obstacles.append(Obstacle(self.temp_obstace, DIS_SCALE * radius))
             self.temp_obstace = None
 
             self.mouse_mode = "none"
@@ -279,33 +296,19 @@ class GPSPannel:
         self.new_waypoint(new_numeric)
 
     def new_waypoint(self, point):
-        pass
+        self.plot_normal_point(point)
+        title = "Point " + str(self.numPoints)
 
-        # self.lat_new, self.lon_new = lat, lon
-        # # if self.pub_pt is not None:
-        # #    self.del_point(self.pub_pt)
+        self.listbox.insert("end", title)
+        self.pointLibrary[title] = point
+        self.numPoints += 1
 
-        # self.pub_pt = self.plot_point(lat, lon, 3, 'cyan')
+    def plot_selected_point(self, point):
+        self.plot_point(point, 8, 'purple')
 
-        # self.pub_pt = Point("Point " + str(self.numPoints), self.lat_new, self.lon_new, self.pub_pt)
+    def plot_normal_point(self, point):
+        self.plot_point(point, 3, 'cyan')
 
-        # self.listbox.insert("end", self.pub_pt.title)
-        # localPoint = {"plotPoint" : self.pub_pt,
-        #               "latitude" : self.pub_pt.latitude,
-        #               "longitude" : self.pub_pt.longitude,
-        #               }
-        # self.pointLibrary[self.pub_pt.title] = localPoint
-        # self.numPoints += 1
-
-    def plot_selected_point(self, lat, lon):
-        self.lat_selected = lat
-        self.lon_selected = lon
-        if self.selected_pt is not None:
-            self.del_point(self.selected_pt.plotPoint)
-
-        self.selected_pt = self.plot_point(lat, lon, 8, 'purple')
-        self.selected_pt = Point("Point " + str(self.numPoints), self.lat_selected, self.lon_selected, self.selected_pt)
-        return self.selected_pt
 
 
 if __name__ == "__main__":
