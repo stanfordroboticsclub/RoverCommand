@@ -199,7 +199,7 @@ class GPSPannel:
 
         ### label display
         self.gps_data = tk.StringVar()
-        tk.Label(self.root, textvariable = self.gps_data).grid(row=8, column=0, columnspan =6)
+        tk.Label(self.root, textvariable = self.gps_data).grid(row=9, column=0, columnspan =6)
         self.gps_data.set("")
 
         self.auto_mode_dis = tk.StringVar()
