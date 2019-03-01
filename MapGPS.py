@@ -65,7 +65,7 @@ class Point:
         # x = lon = 1
         y = self._map.size[0] * (self.latitude - self._map.top_left[0]) / ( self._map.bottom_right[0] - self._map.top_left[0])
         x = self._map.size[1] * (self.longitude - self._map.top_left[1]) / ( self._map.bottom_right[1] - self._map.top_left[1])
-        return (y,x)
+        return (int(y),int(x))
 
     def xy(self):
         pass
@@ -86,16 +86,16 @@ class AStar:
 
         self.came_from = {}
 
-        self.gscore = defaultdict(float("inf"))
+        self.gscore = defaultdict(lambda: float("inf"))
         self.gscore[self.start] = 0
 
-        self.fscore = defaultdict(float("inf"))
+        self.fscore = defaultdict(lambda: float("inf"))
         self.fscore[self.start] = heuristic(start,end)
 
 
-    def run():
+    def run(self):
         while not self.queue.empty():
-            current = self.queue.get()
+            current = self.queue.get()[1]
             if current == self.end:
                 return reconstruct_path(current)
 
@@ -137,18 +137,19 @@ class GPSPannel:
         campus = Map('maps/campus.gif', (750, 1160), \
                      (37.432565, -122.180000), (37.421642, -122.158724))
 
-        oval = Map('maps/oval.gif', (1, 1), \
-                     (37.432543, -122.170674), (37.429054, -122.167716 ))
+        # oval = Map('maps/oval.gif', (1, 1), \
+        #              (37.432543, -122.170674), (37.429054, -122.167716 ))
 
-        zoomed_oval = Map('maps/zoomed_oval.gif', (1, 1), \
+        zoomed_oval = Map('maps/zoomed_oval.gif', (1936, 1616), \
                      (37.431282, -122.170513), (37.429127, -122.168238))
 
 
-        self.map = campus
+        self.map = zoomed_oval
 
         ## UDPComms
         self.gps  = Subscriber(8280, timeout=2)
-        self.rover_pt = None
+        # self.rover_pt = None
+        self.rover_pt = Point.from_gps(self.map, *self.map.bottom_right)
 
         self.gyro = Subscriber(8220, timeout=1)
         self.arrow = None
@@ -225,6 +226,8 @@ class GPSPannel:
         self.last_mouse_click = (0,0)
         self.temp_obstace = None
 
+        self.path_lines = []
+
         self.canvas.bind("<Button-1>", self.mouse_callback)
 
         self.root.after(50, self.update)
@@ -238,28 +241,37 @@ class GPSPannel:
         self.auto_control['command'] = mode
 
 
-    def plot_path(self):
-        self.rover_pt.map()
-        self.auto_control_point
-        
-
-
+    def find_neighbours(self, coords):
+        x,y = coords
+        for i,j in ((1,1), (-1,1), (1,-1), (-1,-1)):
+            new_x = x+i
+            new_y = y+j
+            # if 
 
     def update_path(self):
-        for line in self.path_lines:
-            self.canvas.delete(line)
+
+        #TODO: time limmmtingin
+
+        start = self.rover_pt.map()
+        end = self.auto_control_pt.map()
+        
+        As = AStar(start, end, lambda a: self.find_neighbours(a), \
+              lambda a,b: sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2))
+        path = As.run()
+
+        # TODO Stragihtend path
+
+        for pl in self.path_lines:
+            self.canvas.delete(pl)
+
         self.path_lines = []
-        try:
-            path = self.path_sub.get()
-        except timeout:
-            pass
-        else:
-            points = [ Point.from_gps(self.map, p['lat'], p['lon']) for p in path]
-            for a,b in zip( points[:-1], points[1:]):
-                y1, x1 = a.map()
-                y2, x2 = b.map()
-                line = self.canvas.create_line(x1,x2,y1,y2, color='red')
-                self.path_lines.append(line)
+        points = [ Point.from_map(self.map, p[0], p[0]) for p in path]
+        for a,b in zip( points[:-1], points[1:]):
+            y1, x1 = a.map()
+            y2, x2 = b.map()
+            line = self.canvas.create_line(x1,x2,y1,y2, color='red')
+            self.path_lines.append(line)
+
 
 
     def update_rover(self):
