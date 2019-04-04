@@ -14,16 +14,22 @@ class App:
 
         # open video source (by default this will try to open the computer webcam)
         self.vid = MyVideoCapture(self.video_source)
+        self.last_reload = time.time()
+
+        self.reload_time = 30
 
         # Create a canvas that can fit the above video source size
         self.canvas = tkinter.Canvas(window, width = self.vid.width, height = self.vid.height)
 
 
         self.window.bind("<space>", lambda e:self.send_command(0) )
-        self.window.bind("w", lambda e:self.send_command(2) )
-        self.window.bind("s", lambda e:self.send_command(1) )
+        self.window.bind("w", lambda e:self.send_command(1) )
+        self.window.bind("s", lambda e:self.send_command(2) )
         self.window.bind("a", lambda e:self.send_command(3) )
         self.window.bind("d", lambda e:self.send_command(4) )
+
+        self.window.bind("z", lambda e:self.send_command(13) )
+        self.window.bind("x", lambda e:self.send_command(14) )
 
         # self.window.bind("<KeyRelease-w>", lambda e:self.send_command(0) )
         # self.window.bind("<space>", lambda e:self.send_command(0) )
@@ -43,8 +49,8 @@ class App:
 
         self.window.mainloop()
 
-    def test(self):
-        print("hello")
+    # def test(self):
+    #     print("hello")
 
     def send_command(self, number):
         print("sending", number)
@@ -78,14 +84,19 @@ class App:
         return frame_annotated
 
 
-    def snapshot(self):
-        # Get a frame from the video source
-        ret, frame = self.vid.get_frame()
+    # def snapshot(self):
+    #     # Get a frame from the video source
+    #     ret, frame = self.vid.get_frame()
 
-        if ret:
-            cv2.imwrite("frame-" + time.strftime("%d-%m-%Y-%H-%M-%S") + ".jpg", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+    #     if ret:
+    #         cv2.imwrite("frame-" + time.strftime("%d-%m-%Y-%H-%M-%S") + ".jpg", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
 
     def update(self):
+
+        if (time.time() - self.last_reload) > self.reload_time:
+            self.vid = MyVideoCapture(self.video_source)
+            self.last_reload = time.time()
+
         # Get a frame from the video source
         ret, frame = self.vid.get_frame()
 
