@@ -50,7 +50,7 @@ class GPSPannel:
         self.gps_base = Subscriber(8290, timeout=2)
         self.target_pub = Publisher(8310)
 
-        self.gyro = Subscriber(8220, timeout=1)
+        self.gyro = Subscriber(8870, timeout=1)
         self.angle = 0
 
         ### tkinter setup
@@ -111,23 +111,16 @@ class GPSPannel:
                 self.del_point(self.base_pt)
             self.base_pt = self.plot_point(base['lat'], base['lon'], '#ff0000')
 
-        try:
-            self.angle = gyro.get()['angle'][0]
-        except:
-            pass
             
-        if self.arrow is not None:
-            self.canvas.delete(self.arrow)
+        # if self.arrow is not None:
+        #     self.canvas.delete(self.arrow)
 
 
-        try:
-            y,x = self.gps_to_map( (rover['lat'], rover['lon']) )
-            r = 20
-            self.arrow = self.canvas.create_line(x, y, x + r*sin(self.angle * pi/180),
-                                                       y - r*cos(self.angle * pi/180),
-                                                          arrow=tk.LAST)
-        except:
-            pass
+        # y,x = self.gps_to_map( (msg['lat'], msg['lon']) )
+        # r = 20
+        # self.arrow = self.canvas.create_line(x, y, x + r*sin(self.angle * pi/180),
+        #                                            y - r*cos(self.angle * pi/180),
+        #                                               arrow=tk.LAST)
 
         if self.pub_pt is not None:
             self.target_pub.send([self.lat_new, self.lon_new] )
