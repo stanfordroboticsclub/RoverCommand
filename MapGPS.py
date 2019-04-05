@@ -85,7 +85,7 @@ class GPSPannel:
                      (37.431282, -122.170513), (37.429127, -122.168238))
 
 
-        self.map = campus
+        self.map = EQuad
 
 
         self.selected_pt = None
@@ -95,14 +95,14 @@ class GPSPannel:
         self.gps  = Subscriber(8280, timeout=2)
         self.rover_pt = None
 
-        self.gyro = Subscriber(8870, timeout=1)
+        self.gyro = Subscriber(8220, timeout=1)
         self.arrow = None
 
         self.gps_base = Subscriber(8290, timeout=2)
         self.base_pt = None
 
         # publishes the point the robot should be driving to
-        self.auto_control  = {"target": {"lat":0, "lon":0}, "command":"off"}
+        self.auto_control  = {u"target": {u"lat":0, u"lon":0}, u"command":u"off"}
         self.auto_control_pub = Publisher(8310)
         self.pub_pt = None
 
@@ -179,7 +179,7 @@ class GPSPannel:
 
     def change_auto_mode(self,mode):
         assert (mode == "off") or (mode == 'auto') or (mode == 'plot')
-        self.auto_control['command'] = mode
+        self.auto_control[u'command'] = unicode(mode, "utf-8")
 
 
     def update_rover(self):
@@ -190,7 +190,13 @@ class GPSPannel:
             # print("GPS TIMED OUT")
             self.gps_data.set("MODE: "+self.mouse_mode+", no gps data recived")
         else:
+            # TODO: uggly
+            tmp = None
+            if self.rover_pt != None:
+                tmp = self.rover_pt.plot
             self.rover_pt = Point.from_gps(self.map, rover['lat'], rover['lon'])
+            if tmp is not None:
+                self.rover_pt.plot = tmp
             self.plot_point(self.rover_pt, 3, '#ff6400')
 
             if rover['local'][0]:
@@ -212,6 +218,7 @@ class GPSPannel:
             self.canvas.delete(self.arrow)
         try:
             angle = self.gyro.get()['angle'][0]
+            print(angle)
         except:
             pass
         else:
@@ -227,13 +234,13 @@ class GPSPannel:
             point = self.pointLibrary[title] 
             if i in self.listbox.curselection():
                 self.plot_selected_point(point)
-                self.auto_control['target'] = {'lat': point.gps()[0], 'lon':point.gps()[1]}
+                self.auto_control[u'target'] = {u'lat': point.gps()[0], u'lon':point.gps()[1]}
             else:
                 self.plot_normal_point(point)
 
     def update(self):
         try:
-            self.auto_mode_dis.set(self.auto_control['command'].upper())
+            self.auto_mode_dis.set(self.auto_control[u'command'].upper())
             self.gps_data.set(self.mouse_mode)
 
             self.update_listbox()
