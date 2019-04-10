@@ -118,7 +118,6 @@ class GPSPannel:
 
 
         ### tkinter setup
-        self.listbox = tk.Listbox(self.root)
         # self.scrollbar = tk.Scrollbar(self.root, orient="vertical")
         # self.scrollbar.config(command=self.listbox.yview)
         # self.scrollbar.grid(row=1, column=0)
@@ -143,7 +142,6 @@ class GPSPannel:
         self.e2.grid(row=0, column=4)
         tk.Button(self.root, text='Create Point',command=self.plot_numeric_point).grid(row=0, column=5)
 
-        tk.Button(self.root, text='Delete',     command=lambda: None ).grid(row=2, column=0)
         tk.Button(self.root, text='Waypoint',   command=lambda: self.change_mouse_mode('waypoint') ).grid(row=3, column=0)
         tk.Button(self.root, text='Obstacle',   command=lambda: self.change_mouse_mode('obstacle') ).grid(row=4, column=0)
 
@@ -154,12 +152,39 @@ class GPSPannel:
         tk.Button(self.root, text='STOP',       command=lambda: self.change_auto_mode('off')).grid(row=7, column=0)
 
         ### point library display
-        self.pointLibrary = {}
-        self.listbox.grid(row=1, column=0)
-        self.numPoints = 0;
+        # frame for holding all components associated with point library        
+        self.listbox_frame = tk.Frame(self.root)
+        self.listbox_frame.grid(row=1, column=0)
+
+        # title
+        tk.Label(self.listbox_frame, text='Waypoints').grid(row=0, column=0, columnspan=4)
+
+        # actions on listbox of points
+        tk.Button(self.listbox_frame, text='Delete',    command=lambda: self.delete_selected_waypoint() ) \
+            .grid(row=1, column=0)
+        # reorder: move up
+        tk.Button(self.listbox_frame, text=u'\u2B06',   command=lambda: self.reorder_selected_waypoint(direction=-1) ) \
+            .grid(row=1, column=1)
+        # reorder: move down
+        tk.Button(self.listbox_frame, text=u'\u2B07',   command=lambda: self.reorder_selected_waypoint(direction=1) ) \
+            .grid(row=1, column=2)
+        tk.Button(self.listbox_frame, text='Deselect',  command=lambda: self.listbox.selection_clear(0, END) ) \
+            .grid(row=1, column=3)
+
+        # listbox displaying points
+        self.listbox = tk.Listbox(self.listbox_frame)
+        self.listbox.grid(row=2, column=0, columnspan=4)
+        self.listbox.bind('<FocusOut>',                         lambda: self.listbox.selection_clear(0, END))
+        
+        # stores tuples of (title, point), 
+        #   title is the string that's displayed in listbox
+        #   point is a point object instance
+        self.pointLibrary = []
+        # what to call the next added point
+        self.pointIncrement = 0
 
         ### canvas display
-        self.canvas=tk.Canvas(self.root, width= self.map.size[1], height= self.map.size[0])
+        self.canvas=tk.Canvas(self.root, width= self.map.size[1] - 180, height= self.map.size[0] - 180)
         self.canvas.grid(row=1, column=1, rowspan=8, columnspan=5)
 
         self.canvas.create_image(0, 0, image=self.map.image, anchor=tk.NW)
@@ -229,9 +254,8 @@ class GPSPannel:
                                                           arrow=tk.LAST)
 
     def update_listbox(self):
-        for i in range(self.numPoints):
-            title = self.listbox.get(i)
-            point = self.pointLibrary[title] 
+        for i, p in enumerate(self.pointLibrary):
+            _, point = p
             if i in self.listbox.curselection():
                 self.plot_selected_point(point)
                 self.auto_control[u'target'] = {u'lat': point.gps()[0], u'lon':point.gps()[1]}
@@ -304,11 +328,45 @@ class GPSPannel:
 
     def new_waypoint(self, point):
         self.plot_normal_point(point)
-        title = "Point " + str(self.numPoints)
+        title = "Point " + str(self.pointIncrement)
 
         self.listbox.insert("end", title)
-        self.pointLibrary[title] = point
-        self.numPoints += 1
+        self.pointLibrary.append((title, point))
+        self.pointIncrement += 1
+
+    def delete_selected_waypoint(self):
+        if len(self.listbox.curselection()) == 0:
+            print "No waypoint to delete"
+            return
+
+        index = self.listbox.curselection()[0]
+        
+        _, point = self.pointLibrary[index]
+        self.del_point(point)               # delete from map GUI
+        del self.pointLibrary[index]        # delete from dict
+        self.listbox.delete(index)          # delete from listbox GUI
+
+    def reorder_selected_waypoint(self, direction):
+        if len(self.listbox.curselection()) == 0:
+            print "No waypoint to reorder"
+            return
+        assert direction == -1 or direction == 1
+
+        index = self.listbox.curselection()[0]
+
+        # if can't move up or down anymore, don't do anything
+        if (index == 0 and direction == -1) or (index == len(self.pointLibrary) - 1 and direction == 1):
+            return
+
+        # reorder in pointLibrary
+        title, _ = self.pointLibrary[index]
+        self.pointLibrary.insert(index + direction, self.pointLibrary.pop(index))
+        print self.pointLibrary
+
+        # reorder in listbox
+        self.listbox.delete(index)
+        self.listbox.insert(index + direction, title)
+
 
     def plot_selected_point(self, point):
         self.plot_point(point, 8, 'purple')
