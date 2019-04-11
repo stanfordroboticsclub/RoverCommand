@@ -11,6 +11,14 @@ from UDPComms import timeout
 
 from math import sin,cos,pi,sqrt
 
+### GUI constants
+WAYPOINT_POINT_RADIUS =     8
+ROVER_POINT_RADIUS =        3
+
+WAYPOINT_DEFAULT_COLOR =    'purple'
+WAYPOINT_SELECTED_COLOR =   'cyan'
+
+
 
 class Map:
     def __init__(self, fil, size, top_left, bottom_right):
@@ -86,9 +94,6 @@ class GPSPannel:
 
 
         self.map = EQuad
-
-
-        self.selected_pt = None
 
 
         ## UDPComms
@@ -184,7 +189,7 @@ class GPSPannel:
         self.pointIncrement = 0
 
         ### canvas display
-        self.canvas=tk.Canvas(self.root, width= self.map.size[1] - 180, height= self.map.size[0] - 180)
+        self.canvas=tk.Canvas(self.root, width= self.map.size[1], height= self.map.size[0])
         self.canvas.grid(row=1, column=1, rowspan=8, columnspan=5)
 
         self.canvas.create_image(0, 0, image=self.map.image, anchor=tk.NW)
@@ -222,7 +227,7 @@ class GPSPannel:
             self.rover_pt = Point.from_gps(self.map, rover['lat'], rover['lon'])
             if tmp is not None:
                 self.rover_pt.plot = tmp
-            self.plot_point(self.rover_pt, 3, '#ff6400')
+            self.plot_point(self.rover_pt, ROVER_POINT_RADIUS, '#ff6400')
 
             if rover['local'][0]:
                 print("x", rover['local'][1], "y", rover['local'][2])
@@ -236,7 +241,7 @@ class GPSPannel:
             # print("GPSBase TIMED OUT")
         else:
             self.base_pt = Point.from_gps(self.map, base['lat'], base['lon'])
-            self.plot_point(self.base_pt, 3, '#ff0000')
+            self.plot_point(self.base_pt, ROVER_POINT_RADIUS, '#ff0000')
 
             
         if self.arrow is not None:
@@ -264,7 +269,6 @@ class GPSPannel:
         # populate UDPComms message with current ordered list of waypoints
         msg = [ {u'lat': point.gps()[0], u'lon': point.gps()[1]} for _, point in self.pointLibrary ]
         self.auto_control[u'waypoints'] = msg
-        print self.auto_control
 
     def update(self):
         try:
@@ -311,7 +315,22 @@ class GPSPannel:
             self.mouse_mode = "none"
 
         elif self.mouse_mode == "none":
-            print "nothing to do"
+            did_click_waypoint = False
+
+            ### check if we clicked on a waypoint; if so, select it
+            for i, p in enumerate(self.pointLibrary):
+                title, point = p
+                y, x = point.map()
+                if abs(event.x - x) < WAYPOINT_POINT_RADIUS and abs(event.y - y) < WAYPOINT_POINT_RADIUS:
+                    print 'you clicked on', title
+                    self.listbox.selection_clear(0, END)
+                    self.listbox.selection_set(i)
+                    did_click_waypoint = True
+                    break
+
+            ### if clicked on the map but outside of waypoints, clear current selection
+            if not did_click_waypoint:
+                self.listbox.selection_clear(0, END)
 
         else:
             print "ERROR"
@@ -365,7 +384,6 @@ class GPSPannel:
         # reorder in pointLibrary
         title, _ = self.pointLibrary[index]
         self.pointLibrary.insert(index + direction, self.pointLibrary.pop(index))
-        print self.pointLibrary
 
         # reorder in listbox
         self.listbox.delete(index)
@@ -373,10 +391,10 @@ class GPSPannel:
 
 
     def plot_selected_point(self, point):
-        self.plot_point(point, 8, 'purple')
+        self.plot_point(point, WAYPOINT_POINT_RADIUS, WAYPOINT_SELECTED_COLOR)
 
     def plot_normal_point(self, point):
-        self.plot_point(point, 3, 'cyan')
+        self.plot_point(point, WAYPOINT_POINT_RADIUS, WAYPOINT_DEFAULT_COLOR)
 
 
 
