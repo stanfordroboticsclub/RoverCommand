@@ -102,7 +102,7 @@ class GPSPannel:
         self.base_pt = None
 
         # publishes the point the robot should be driving to
-        self.auto_control  = {u"target": {u"lat":0, u"lon":0}, u"command":u"off"}
+        self.auto_control  = {u"waypoints": [], u"command":u"off"}
         self.auto_control_pub = Publisher(8310)
         self.pub_pt = None
 
@@ -253,21 +253,25 @@ class GPSPannel:
                                                        y - r*cos(angle * pi/180),
                                                           arrow=tk.LAST)
 
-    def update_listbox(self):
+    def update_waypoints(self):
         for i, p in enumerate(self.pointLibrary):
             _, point = p
             if i in self.listbox.curselection():
                 self.plot_selected_point(point)
-                self.auto_control[u'target'] = {u'lat': point.gps()[0], u'lon':point.gps()[1]}
             else:
                 self.plot_normal_point(point)
+
+        # populate UDPComms message with current ordered list of waypoints
+        msg = [ {u'lat': point.gps()[0], u'lon': point.gps()[1]} for _, point in self.pointLibrary ]
+        self.auto_control[u'waypoints'] = msg
+        print self.auto_control
 
     def update(self):
         try:
             self.auto_mode_dis.set(self.auto_control[u'command'].upper())
             self.gps_data.set(self.mouse_mode)
 
-            self.update_listbox()
+            self.update_waypoints()
             self.update_rover()
 
             self.auto_control_pub.send(self.auto_control)
