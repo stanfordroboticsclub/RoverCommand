@@ -122,15 +122,9 @@ class GPSPannel:
         self.path_sub = Subscriber(9999)
 
 
-        ### tkinter setup
-        # self.scrollbar = tk.Scrollbar(self.root, orient="vertical")
-        # self.scrollbar.config(command=self.listbox.yview)
-        # self.scrollbar.grid(row=1, column=0)
-
-
         ### label display
         self.gps_data = tk.StringVar()
-        tk.Label(self.root, textvariable = self.gps_data).grid(row=8, column=0, columnspan =6)
+        tk.Label(self.root, textvariable = self.gps_data).grid(row=8, column=0)#, columnspan =6)
         self.gps_data.set("")
 
         self.auto_mode_dis = tk.StringVar()
@@ -139,30 +133,23 @@ class GPSPannel:
 
 
         ### numeric input display
-        tk.Label(self.root, text="Lat: ").grid(row=0, column=1)
-        tk.Label(self.root, text="Lon: ").grid(row=0, column=3)
-        self.e1 = tk.Entry(self.root)
-        self.e2 = tk.Entry(self.root)
-        self.e1.grid(row=0 ,column=2)
-        self.e2.grid(row=0, column=4)
-        tk.Button(self.root, text='Create Point',command=self.plot_numeric_point).grid(row=0, column=5)
-
-        tk.Button(self.root, text='Waypoint',   command=lambda: self.change_mouse_mode('waypoint') ).grid(row=3, column=0)
-        tk.Button(self.root, text='Obstacle',   command=lambda: self.change_mouse_mode('obstacle') ).grid(row=4, column=0)
-
         self.root.bind("<Escape>",                      lambda: self.change_mouse_mode('none'))
 
         tk.Button(self.root, text='Plot Course',command=lambda: self.change_auto_mode('plot')).grid(row=5, column=0)
         tk.Button(self.root, text='Auto',       command=lambda: self.change_auto_mode('auto')).grid(row=6, column=0)
         tk.Button(self.root, text='STOP',       command=lambda: self.change_auto_mode('off')).grid(row=7, column=0)
 
-        ### point library display
+
+        '''
+        begin: EXISTING WAYPOINT ACTIONS AND LISTBOX
+        '''
+
         # frame for holding all components associated with point library        
         self.listbox_frame = tk.Frame(self.root)
         self.listbox_frame.grid(row=1, column=0)
 
         # title
-        tk.Label(self.listbox_frame, text='Waypoints').grid(row=0, column=0, columnspan=4)
+        tk.Label(self.listbox_frame, text='CURRENT WAYPOINTS').grid(row=0, column=0, columnspan=4)
 
         # actions on listbox of points
         tk.Button(self.listbox_frame, text='Delete',    command=lambda: self.delete_selected_waypoint() ) \
@@ -173,8 +160,8 @@ class GPSPannel:
         # reorder: move down
         tk.Button(self.listbox_frame, text=u'\u2B07',   command=lambda: self.reorder_selected_waypoint(direction=1) ) \
             .grid(row=1, column=2)
-        tk.Button(self.listbox_frame, text='Deselect',  command=lambda: self.listbox.selection_clear(0, END) ) \
-            .grid(row=1, column=3)
+        # tk.Button(self.listbox_frame, text='Deselect',  command=lambda: self.listbox.selection_clear(0, END) ) \
+        #     .grid(row=1, column=3)
 
         # listbox displaying points
         self.listbox = tk.Listbox(self.listbox_frame)
@@ -187,9 +174,57 @@ class GPSPannel:
         self.pointLibrary = []
         # what to call the next added point
         self.pointIncrement = 0
+        
+        '''
+        end: EXISTING WAYPOINT ACTIONS AND LISTBOX
+        '''
+
+
+        '''
+        begin: CREATE WAYPOINT ACTIONS
+        '''
+
+        # "add to map" frame
+        self.create_frame = tk.Frame(self.root)
+        self.create_frame.grid(row=3, column=0)
+
+        # title
+        tk.Label(self.create_frame, text='ADD TO MAP').grid(row=0, column=0, columnspan=2)
+        
+        # click to add waypoint functions
+        self.create_click_frame = tk.Frame(self.create_frame)
+        self.create_click_frame.grid(row=4, column=0)
+        tk.Label(self.create_click_frame, text='Click to add:').grid(row=0, column=0, columnspan=2)
+        tk.Button(self.create_click_frame, text='Waypoint', command=lambda: self.change_mouse_mode('waypoint') ).grid(row=1, column=0)
+        tk.Button(self.create_click_frame, text='Obstacle', command=lambda: self.change_mouse_mode('obstacle') ).grid(row=1, column=1)
+        tk.Button(self.create_click_frame, text='None', command=lambda: self.change_mouse_mode('none') ).grid(row=2, column=0, columnspan=2)
+        
+        # manual add waypoint functions
+        self.create_manual_frame = tk.Frame(self.create_frame)
+        self.create_manual_frame.grid(row=5, column=0)
+
+        tk.Label(self.create_manual_frame, text='Manual add:').grid(row=0, column=0, columnspan=2)
+        # text entry labels
+        tk.Label(self.create_manual_frame, text='Lat').grid(row=1, column=0, sticky=E)
+        tk.Label(self.create_manual_frame, text='Lon').grid(row=2, column=0, sticky=E)
+        tk.Label(self.create_manual_frame, text='Name').grid(row=3, column=0, sticky=E)
+        # text entry boxes
+        self.lat_entry = tk.Entry(self.create_manual_frame)
+        self.lon_entry = tk.Entry(self.create_manual_frame)
+        self.name_entry = tk.Entry(self.create_manual_frame)
+        self.lat_entry.grid(row=1 ,column=1)
+        self.lon_entry.grid(row=2, column=1)
+        self.name_entry.grid(row=3, column=1)
+        # button
+        tk.Button(self.create_manual_frame, text='Create Point', command=self.plot_numeric_point).grid(row=4, column=0, columnspan=2)
+
+        '''
+        end: CREATE WAYPOINT ACTIONS
+        '''
+
 
         ### canvas display
-        self.canvas=tk.Canvas(self.root, width= self.map.size[1], height= self.map.size[0])
+        self.canvas=tk.Canvas(self.root, width= self.map.size[1] - 180, height= self.map.size[0] - 180)
         self.canvas.grid(row=1, column=1, rowspan=8, columnspan=5)
 
         self.canvas.create_image(0, 0, image=self.map.image, anchor=tk.NW)
@@ -346,12 +381,18 @@ class GPSPannel:
         self.canvas.delete(point.plot)
 
     def plot_numeric_point(self):
-        new_numeric = Point.from_gps(self.map, float(self.e1.get()), float(self.e2.get()))
-        self.new_waypoint(new_numeric)
+        new_numeric = Point.from_gps(self.map, float(self.lat_entry.get()), float(self.lon_entry.get()))
+        self.new_waypoint(new_numeric, self.name_entry.get())
+        self.name_entry.delete(0, END)
 
-    def new_waypoint(self, point):
+    def new_waypoint(self, point, name=""):
         self.plot_normal_point(point)
-        title = "Point " + str(self.pointIncrement)
+
+        # optional name for the point
+        if name == "":
+            title = "Point " + str(self.pointIncrement)
+        else:
+            title = name
 
         self.listbox.insert("end", title)
         self.pointLibrary.append((title, point))
