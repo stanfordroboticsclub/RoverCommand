@@ -33,11 +33,11 @@ while True:
 
     mode_file.seek(0)
     mode = mode_file.read()
-
+    
     pygame.event.pump()
 
     if mode.startswith('drive'):
-        forward = (pygame.joystick.Joystick(0).get_axis(5))
+        forward = (pygame.joystick.Joystick(0).get_axis(1))
         twist = (pygame.joystick.Joystick(0).get_axis(2))
         on = (pygame.joystick.Joystick(0).get_button(5))
 
@@ -64,7 +64,7 @@ while True:
         circle  = (pygame.joystick.Joystick(0).get_button(2))
         triangle  = (pygame.joystick.Joystick(0).get_button(3))
 
-        PS  = (pygame.joystick.Joystick(0).get_button(12))
+        PS  = (pygame.joystick.Joystick(0).get_button(12)) 
 
         # print("button")
         # for i in range(14):
@@ -77,16 +77,28 @@ while True:
 
         reset = (PS == 1) and (triangle == 1)
 
-        target_vel = {"x": r_side,
-                      "y": r_forward,
+        if(PS == 0):
+              target_vel = {"x": l_side,
+                      "y": l_forward,
                       "z": (r_trigger - l_trigger)/2,
-                      "yaw": l_side,
-                      "pitch": l_forward,
+                      "yaw": r_side,
+                      "pitch": r_forward,
                       "roll": (r_shoulder - l_shoulder),
                       "grip": cross - square,
                       "hat": hat,
-                      "reset": reset}
-
+                      "reset": reset,
+                      "trueXYZ": circle}
+        else:
+              target_vel = {"x": 0,
+                      "y": 0,
+                      "z": 0,
+                      "yaw": 0,
+                      "pitch": 0,
+                      "roll": 0,
+                      "grip": 0,
+                      "hat": (0,0),
+                      "reset": reset,
+                      "trueXYZ": 0}
         print(target_vel)
         arm_pub.send(target_vel)
     else:
