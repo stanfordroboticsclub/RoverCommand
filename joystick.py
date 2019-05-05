@@ -30,7 +30,7 @@ mode_file = open("/tmp/robot_joystick_mode.txt","r")
 
 # Prints the values for axis0
 while True:
-
+    print("running")
     mode_file.seek(0)
     mode = mode_file.read()
     
