@@ -4,7 +4,9 @@ from __future__ import division
 
 import time
 import Tkinter as tk
+import tkFont
 from Tkinter import *
+import ttk
 from UDPComms import Subscriber
 from UDPComms import Publisher
 from UDPComms import timeout
@@ -82,9 +84,12 @@ class GPSPanel:
     def __init__(self):
         self.root = tk.Tk()
 
+        self.FONT_HEADER = tkFont.Font(family="Helvetica", size=14, weight=tkFont.BOLD)
+
         ### LOAD MAPS
         self.load_maps()
-        self.map = self.maps['campus']
+        self.map = self.maps[self.maps.keys()[0]]
+        self.map = self.maps['oval']
 
 
         ## UDPComms
@@ -113,23 +118,33 @@ class GPSPanel:
         self.path_sub = Subscriber(9999)
 
 
-        ### label display
-        self.gps_data = tk.StringVar()
-        tk.Label(self.root, textvariable = self.gps_data).grid(row=8, column=0)#, columnspan =6)
-        self.gps_data.set("")
+        # none, waypoint, obstacle, obstacle_radius
+        self.mouse_mode = "none"
+        self.last_mouse_click = (0,0)
+        self.temp_obstace = None
 
+
+
+        ### AUTONOMY MODE
         self.auto_mode_dis = tk.StringVar()
-        tk.Label(self.root, textvariable = self.auto_mode_dis, font=("Courier", 44)).grid(row=0, column=0)
+        left_row = 0
+        tk.Label(self.root, textvariable = self.auto_mode_dis, font=("Courier", 44)).grid(row=left_row, column=0)
         self.auto_mode_dis.set("")
+
+        left_row += 1
+        ttk.Separator(self.root, orient=VERTICAL).grid(row=left_row, column=0, sticky='ew')
 
 
 
         ### EXISTING WAYPOINT ACTIONS AND LISTBOX
         # frame for holding all components associated with point library        
         listbox_frame = tk.Frame(self.root)
-        listbox_frame.grid(row=1, column=0)
+        left_row += 1
+        listbox_frame.grid(row=left_row, column=0)
 
         self.display_curr_waypoint_frame(listbox_frame)
+        left_row += 1
+        ttk.Separator(self.root, orient=VERTICAL).grid(row=left_row, column=0, sticky='ew')
         
         # stores tuples of (title, point):
         #   title is the string that's displayed in listbox
@@ -141,40 +156,67 @@ class GPSPanel:
 
 
         ### CREATE WAYPOINT ACTIONS
+        left_row += 1
         create_frame = tk.Frame(self.root)
-        create_frame.grid(row=2, column=0)
+        create_frame.grid(row=left_row, column=0)
 
         self.display_create_waypoint_frame(create_frame)
         self.root.bind("<Escape>",                      lambda: self.change_mouse_mode('none'))
+        left_row += 1
+        ttk.Separator(self.root, orient=VERTICAL).grid(row=left_row, column=0, sticky='ew')
 
 
 
         ### AUTONOMOUS MODE ACTIONS
         auto_frame = tk.Frame(self.root)
-        auto_frame.grid(row=3, column=0)
+        left_row += 1
+        auto_frame.grid(row=left_row, column=0)
 
         self.display_auto_actions_frame(auto_frame)
+        left_row += 1
+        ttk.Separator(self.root, orient=VERTICAL).grid(row=left_row, column=0, sticky='ew')
 
 
 
-        ### LOCATION INFO
+        ### CHANGE MAP ACTIONS
+        map_frame = tk.Frame(self.root)
+        left_row += 1
+        map_frame.grid(row=left_row, column=0)
+
+        self.display_change_map_actions_frame(map_frame)
+
+
+
+        top_col = 1
+        ttk.Separator(self.root, orient=VERTICAL).grid(row=0, column=top_col, sticky='ns')
+
+        ### MOUSE LOCATION INFO
+        mouse_info_frame = tk.Frame(self.root)
+        top_col += 1
+        mouse_info_frame.grid(row=0, column=top_col)
+
+        self.display_mouse_info_frame(mouse_info_frame)
+        top_col += 1
+        ttk.Separator(self.root, orient=VERTICAL).grid(row=0, column=top_col, sticky='ns')
+
+
+        ### ROVER LOCATION INFO
         location_frame = tk.Frame(self.root)
-        location_frame.grid(row=0, column=1)
+        top_col += 1
+        location_frame.grid(row=0, column=top_col)
 
         self.display_location_info_frame(location_frame)
 
 
 
+
         ### canvas display
-        self.canvas=tk.Canvas(self.root, width= self.map.size[1], height= self.map.size[0])
+        self.canvas = tk.Canvas(self.root, width= self.map.size[1], height= self.map.size[0])
         self.canvas.grid(row=1, column=1, rowspan=8, columnspan=5)
 
-        self.canvas.create_image(0, 0, image=self.map.image, anchor=tk.NW)
+        self.canvas_img = self.canvas.create_image(0, 0, image=self.map.image, anchor=tk.NW)
 
-        # none, waypoint, obstacle, obstacle_radius
-        self.mouse_mode = "none"
-        self.last_mouse_click = (0,0)
-        self.temp_obstace = None
+
 
         # mouse callbacks
         self.canvas.bind("<Button-1>", self.mouse_click_callback)
@@ -207,7 +249,7 @@ class GPSPanel:
     '''
     def display_curr_waypoint_frame(self, frame):
         # title
-        tk.Label(frame, text='CURRENT WAYPOINTS').grid(row=0, column=0, columnspan=4)
+        tk.Label(frame, text='EDIT WAYPOINTS', font=self.FONT_HEADER).grid(row=0, column=0, columnspan=4)
 
         # actions on listbox of points
         tk.Button(frame, text='Delete',    command=lambda: self.delete_selected_waypoint() ) \
@@ -226,7 +268,7 @@ class GPSPanel:
 
     def display_create_waypoint_frame(self, frame):
         # title
-        tk.Label(frame, text='ADD TO MAP').grid(row=0, column=0, columnspan=2)
+        tk.Label(frame, text='ADD TO MAP', font=self.FONT_HEADER).grid(row=0, column=0, columnspan=2)
         
         ### click to add waypoint functions
         create_click_frame = tk.Frame(frame)
@@ -261,22 +303,61 @@ class GPSPanel:
         tk.Button(create_manual_frame, text='Create Point', command=self.plot_numeric_point).grid(row=4, column=0, columnspan=2)
 
     def display_auto_actions_frame(self, frame):
-        tk.Label(frame, text='AUTONOMOUS ACTIONS').grid(row=0, column=0, columnspan=2)
+        tk.Label(frame, text='AUTONOMOUS ACTIONS', font=self.FONT_HEADER).grid(row=0, column=0, columnspan=2)
 
         tk.Button(frame, text='Plot Course',command=lambda: self.change_auto_mode('plot')).grid(row=1, column=0)
         tk.Button(frame, text='Auto',       command=lambda: self.change_auto_mode('auto')).grid(row=1, column=1)
         tk.Button(frame, text='STOP',       command=lambda: self.change_auto_mode('off')).grid(row=2, column=0, columnspan=2)
 
+    def display_change_map_actions_frame(self, frame):
+        tk.Label(frame, text="CHANGE MAP", font=self.FONT_HEADER).grid(row=0, column=0)
+        
+        map_choices = self.maps.keys()
+
+        self.map_str_var = tk.StringVar()
+        self.map_str_var.set(map_choices[0])
+        self.map_str_var.trace('w', self.change_map)
+
+        tk.OptionMenu(frame, self.map_str_var, *map_choices).grid(row=1, column=0)
+
     def display_location_info_frame(self, frame):
-        tk.Label(frame, text='MOUSE LOCATION').grid(row=0, column=0, columnspan=2)
+        col = 0
 
-        tk.Label(frame, text='Lat:').grid(row=1, column=0, sticky=E)
-        tk.Label(frame, text='Lon:').grid(row=2, column=0, sticky=E)
+        # Rover location
+        tk.Label(frame, text=' ROVER LOCATION ', font=self.FONT_HEADER).grid(row=0, column=col, columnspan=2)
 
-        self.mouse_lat_str = tk.StringVar()
-        self.mouse_lon_str = tk.StringVar()
-        tk.Label(frame, textvariable=self.mouse_lat_str).grid(row=1, column=1, sticky=W)
-        tk.Label(frame, textvariable=self.mouse_lon_str).grid(row=2, column=1, sticky=W)
+        tk.Label(frame, text='Lat:').grid(row=1, column=col, sticky=E)
+        tk.Label(frame, text='Lon:').grid(row=2, column=col, sticky=E)
+
+        self.rover_lat_str_var = tk.StringVar()
+        self.rover_lon_str_var = tk.StringVar()
+        tk.Label(frame, textvariable=self.rover_lat_str_var).grid(row=1, column=col+1, sticky=W)
+        tk.Label(frame, textvariable=self.rover_lon_str_var).grid(row=2, column=col+1, sticky=W)
+
+    def display_mouse_info_frame(self, frame):
+        col = 0
+
+        # Mouse location
+        tk.Label(frame, text=' MOUSE LOCATION ', font=self.FONT_HEADER).grid(row=0, column=col, columnspan=2)
+
+        tk.Label(frame, text='Lat:').grid(row=1, column=col, sticky=E)
+        tk.Label(frame, text='Lon:').grid(row=2, column=col, sticky=E)
+
+        self.mouse_lat_str_var = tk.StringVar()
+        self.mouse_lon_str_var = tk.StringVar()
+        tk.Label(frame, textvariable=self.mouse_lat_str_var).grid(row=1, column=col+1, sticky=W)
+        tk.Label(frame, textvariable=self.mouse_lon_str_var).grid(row=2, column=col+1, sticky=W)
+
+        col += 2
+        # Mouse mode
+        tk.Label(frame, text=' MOUSE MODE ', font=self.FONT_HEADER).grid(row=0, column=col)
+        self.mouse_mode_str = tk.StringVar()
+        self.mouse_mode_str.set(self.mouse_mode)
+        tk.Label(frame, textvariable=self.mouse_mode_str).grid(row=1, column=col)
+
+        
+
+
     '''
     end: GUI LAYOUT FUNCTIONS
     '''
@@ -290,6 +371,12 @@ class GPSPanel:
         assert (mode == "off") or (mode == 'auto') or (mode == 'plot')
         self.auto_control[u'command'] = unicode(mode, "utf-8")
 
+    def change_map(self, *args):
+        self.map = self.maps[self.map_str_var.get()]
+        self.canvas.config(width=self.map.size[1], height=self.map.size[0])
+        self.canvas.itemconfig(self.canvas_img, image=self.map.image)
+
+
 
     def update_rover(self):
         try:
@@ -297,7 +384,8 @@ class GPSPanel:
         except timeout:
             pass
             # print("GPS TIMED OUT")
-            self.gps_data.set("MODE: "+self.mouse_mode+", no gps data recived")
+            self.rover_lon_str_var.set("No GPS")
+            self.rover_lat_str_var.set("No GPS")
         else:
             # TODO: uggly
             tmp = None
@@ -311,7 +399,8 @@ class GPSPanel:
             if rover['local'][0]:
                 print("x", rover['local'][1], "y", rover['local'][2])
 
-            self.gps_data.set("MODE: "+self.mouse_mode+", "+ str(rover) )
+            self.rover_lon_str_var.set(rover['lat'])
+            self.rover_lat_str_var.set(rover['lon'])
 
         try:
             base =  self.gps_base.get()
@@ -352,7 +441,7 @@ class GPSPanel:
     def update(self):
         try:
             self.auto_mode_dis.set(self.auto_control[u'command'].upper())
-            self.gps_data.set(self.mouse_mode)
+            self.mouse_mode_str.set(self.mouse_mode)
 
             self.update_waypoints()
             self.update_rover()
@@ -367,8 +456,8 @@ class GPSPanel:
     def mouse_motion_callback(self, event):
         x, y = event.x, event.y
         mouse_point = Point.from_map(self.map, x, y)
-        self.mouse_lat_str.set(round(mouse_point.latitude, 5))
-        self.mouse_lon_str.set(round(mouse_point.longitude, 5))
+        self.mouse_lat_str_var.set(round(mouse_point.latitude, 5))
+        self.mouse_lon_str_var.set(round(mouse_point.longitude, 5))
 
 
     def mouse_click_callback(self, event):
