@@ -37,12 +37,17 @@ while True:
     pygame.event.pump()
 
     if mode.startswith('drive'):
-        forward = (pygame.joystick.Joystick(0).get_axis(1))
+        forward_left = (pygame.joystick.Joystick(0).get_axis(1))
+        forward_right = (pygame.joystick.Joystick(0).get_axis(5))
         twist = (pygame.joystick.Joystick(0).get_axis(2))
-        on = (pygame.joystick.Joystick(0).get_button(5))
 
-        if on:
-            drive_pub.send({'f':-150*forward,'t':-80*twist})
+        on_right = (pygame.joystick.Joystick(0).get_button(5))
+        on_left = (pygame.joystick.Joystick(0).get_button(4))
+
+        if on_left:
+            drive_pub.send({'f':-150*forward_left,'t':-80*twist})
+        elif on_right:
+            drive_pub.send({'f':-150*forward_right,'t':-80*twist})
         else:
             drive_pub.send({'f':0,'t':0})
 
