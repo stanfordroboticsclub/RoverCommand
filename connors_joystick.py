@@ -50,11 +50,11 @@ while True:
         triangle  = (pygame.joystick.Joystick(0).get_button(3))
         
         if on_left:
-            drive_pub.send({'f':forward_left,'t':twist, 'power_mid':square, 'power_back':cross})
+            drive_pub.send({'f':forward_left,'t':twist, 'power_mid':square, 'power_back':cross, 'turn':circle})
         elif on_right:
-            drive_pub.send({'f':forward_right,'t':twist, 'power_mid':square, 'power_back':cross})
+            drive_pub.send({'f':forward_right,'t':twist, 'power_mid':square, 'power_back':cross, 'turn':circle})
         else:
-            drive_pub.send({'f':0,'t':0, 'power_mid':square, 'power_back':cross})
+            drive_pub.send({'f':0,'t':0, 'power_mid':square, 'power_back':cross, 'turn':circle})
 
     if mode.startswith('arm'):
         r_forward  = -(pygame.joystick.Joystick(0).get_axis(5))
