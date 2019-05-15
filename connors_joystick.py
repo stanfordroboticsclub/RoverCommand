@@ -26,36 +26,58 @@ JoyAx = pygame.joystick.Joystick(0).get_numaxes()
 print("Number of axis:")
 print(JoyAx)
 
-mode_file = open("/tmp/robot_joystick_mode.txt","r")
-
+#mode_file = open("/tmp/robot_joystick_mode.txt","r")
+mode = "safe"
 # Prints the values for axis0
 while True:
-    print("running")
-    mode_file.seek(0)
-    mode = mode_file.read()
+#    print("running")
+#    mode_file.seek(0)
+#    mode = mode_file.read()
     
     pygame.event.pump()
+
+    
+    PS  = (pygame.joystick.Joystick(0).get_button(12)) 
+    hat = pygame.joystick.Joystick(0).get_hat(0)
+
+    if(PS and hat[1] == -1):
+        mode = "safe"
+    elif(PS and hat[1] == 1):
+        mode = "drive"
+    elif(PS and hat[0] == 1):
+        mode = "arm"
+    print(mode)
 
     if mode.startswith('drive'):
         forward_left = (pygame.joystick.Joystick(0).get_axis(1))
         forward_right = (pygame.joystick.Joystick(0).get_axis(5))
         twist = (pygame.joystick.Joystick(0).get_axis(2))
-
+        forward_left = forward_left*abs(forward_left)
+        twist = twist*abs(twist)
         on_right = (pygame.joystick.Joystick(0).get_button(5))
         on_left = (pygame.joystick.Joystick(0).get_button(4))
+
+
+        r_trigger  = (pygame.joystick.Joystick(0).get_axis(4))
+        l_trigger = (pygame.joystick.Joystick(0).get_axis(3))
 
         square  = (pygame.joystick.Joystick(0).get_button(0))
         cross  = (pygame.joystick.Joystick(0).get_button(1))
         circle  = (pygame.joystick.Joystick(0).get_button(2))
         triangle  = (pygame.joystick.Joystick(0).get_button(3))
-        
+        forward = 0
+        turn = 0
         if on_left:
-            drive_pub.send({'f':forward_left,'t':twist, 'power_mid':square, 'power_back':cross, 'turn':circle})
+            forward = -forward_left
+            turn = twist
         elif on_right:
-            drive_pub.send({'f':forward_right,'t':twist, 'power_mid':square, 'power_back':cross, 'turn':circle})
-        else:
-            drive_pub.send({'f':0,'t':0, 'power_mid':square, 'power_back':cross, 'turn':circle})
-
+            forward = -forward_right
+            turn = twist
+        vel = 1 if r_trigger > .5 else 0
+        cur = 1 if l_trigger > .5 else 0
+        drive_pub.send({'f':forward,'t':turn, 'power_left':square, 'power_back':cross, 'power_right':circle, 'power_mid': triangle,'vel':vel,'cur':cur})
+        print({'f':forward,'t':turn, 'power_left':square, 'power_back':cross, 'power_right':circle, 'power_mid': triangle,'vel':vel,'cur':cur})
+   
     if mode.startswith('arm'):
         r_forward  = -(pygame.joystick.Joystick(0).get_axis(5))
         r_side = (pygame.joystick.Joystick(0).get_axis(2))
@@ -73,17 +95,6 @@ while True:
         cross  = (pygame.joystick.Joystick(0).get_button(1))
         circle  = (pygame.joystick.Joystick(0).get_button(2))
         triangle  = (pygame.joystick.Joystick(0).get_button(3))
-
-        PS  = (pygame.joystick.Joystick(0).get_button(12)) 
-
-        # print("button")
-        # for i in range(14):
-        #     print(i, pygame.joystick.Joystick(0).get_button(i))
-        # print("axis")
-        # for i in range(12):
-        #     print(i, pygame.joystick.Joystick(0).get_axis(i))
-
-        hat = pygame.joystick.Joystick(0).get_hat(0)
 
         reset = (PS == 1) and (triangle == 1)
 
