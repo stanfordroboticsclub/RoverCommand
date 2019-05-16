@@ -2,12 +2,13 @@ import os
 import pygame
 from UDPComms import Publisher
 
-os.environ["SDL_VIDEODRIVER"] = "dummy"
 drive_pub = Publisher(8830)
 arm_pub = Publisher(8410)
 
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 pygame.display.init()
 pygame.joystick.init()
+pygame.display.set_mode((1,1))
 
 # wait untill joystick is connected
 while 1:
@@ -47,7 +48,7 @@ while True:
         if on_left:
             drive_pub.send({'f':-150*forward_left,'t':-80*twist})
         elif on_right:
-            drive_pub.send({'f':-150*forward_right,'t':-80*twist})
+            drive_pub.send({'f':-300*forward_right,'t':-150*twist})
         else:
             drive_pub.send({'f':0,'t':0})
 
