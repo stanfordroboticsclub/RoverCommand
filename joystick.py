@@ -1,16 +1,21 @@
 import os
 import pygame
 from UDPComms import Publisher
+import signal
 
 drive_pub = Publisher(8830)
 arm_pub = Publisher(8410)
 
+# prevents quiting on pi when run through systemd
+def handler(signum, frame):
+    print("GOT singal", signum)
+signal.signal(signal.SIGHUP, handler)
+
 os.environ["SDL_VIDEODRIVER"] = "dummy"
 pygame.display.init()
 pygame.joystick.init()
-pygame.display.set_mode((1,1))
 
-# wait untill joystick is connected
+# wait until joystick is connected
 while 1:
     try:
         pygame.joystick.Joystick(0).init()
