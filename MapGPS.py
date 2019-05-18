@@ -161,7 +161,7 @@ class GPSPanel:
         create_frame.grid(row=left_row, column=0)
 
         self.display_create_waypoint_frame(create_frame)
-        self.root.bind("<Escape>",                      lambda: self.change_mouse_mode('none'))
+        self.root.bind("<Escape>",                      lambda x: self.change_mouse_mode('none'))
         left_row += 1
         ttk.Separator(self.root, orient=VERTICAL).grid(row=left_row, column=0, sticky='ew')
 
@@ -175,6 +175,8 @@ class GPSPanel:
         self.display_auto_actions_frame(auto_frame)
         left_row += 1
         ttk.Separator(self.root, orient=VERTICAL).grid(row=left_row, column=0, sticky='ew')
+
+        self.root.bind("<space>",                      lambda x: self.change_auto_mode('off'))
 
 
 
