@@ -24,14 +24,8 @@ DRIVE_TELEMETRY_PORT = 		8810
 ARM_TELEMETRY_PORT = 		0 # TODO
 SCIENCE_TELEMETRY_PORT = 	0 # TODO
 
-DriveTelemetry = namedtuple('DriveTelemetry', ['vbus_voltage', \
-											   'front_axis0_current', \
-											   'front_axis1_current', \
-											   'middle_axis0_current', \
-											   'middle_axis1_current', \
-											   'back_axis0_current', \
-											   'back_axis1_current'])
-NUM_DRIVE_DATA = 			len(DriveTelemetry._fields)
+ODRIVES = 					['front', 'middle', 'back']
+NUM_AXES = 					2
 
 MAX_QUEUE_SIZE = 			50
 GRAPH_UPDATE_INTERVAL = 	50	# milliseconds
@@ -39,12 +33,12 @@ GRAPH_UPDATE_INTERVAL = 	50	# milliseconds
 # Ploting min + max bounds and reference line
 VBUS_VOLTAGE_MIN = 			30
 VBUS_VOLTAGE_MAX = 			40
-VBUS_VOLTAGE_THRESH = 		34
+VBUS_VOLTAGE_THRESH = 		36
 VBUS_VOLTAGE_BOUNDS =		(VBUS_VOLTAGE_MIN, VBUS_VOLTAGE_MAX, VBUS_VOLTAGE_THRESH)
 
 CURRENT_MIN =				0
-CURRENT_MAX =				1
-CURRENT_THRESH =			.8
+CURRENT_MAX =				5
+CURRENT_THRESH =			3
 CURRENT_BOUNDS =			(CURRENT_MIN, CURRENT_MAX, CURRENT_THRESH)
 
 
@@ -55,9 +49,8 @@ class TelemetryPanel:
 
 		# Plotting data
 		self.drive_status = False
-		self.drive_data_queues = [[] for i in range(NUM_DRIVE_DATA)]
-		# Dictionary of named fields to list indices; ex. {'vbus_voltage': 0}
-		# self.drive_data_labels = {name: index for index, name in enumerate(DriveTelemetry._fields)}
+		self.drive_currents = { odrive: [[] for i in range(NUM_AXES)] for odrive in ODRIVES }
+		self.drive_voltages = []
 
 		## UDPComms
 		self.drive_telemetry = Subscriber(DRIVE_TELEMETRY_PORT, timeout=2)
@@ -97,7 +90,7 @@ class TelemetryPanel:
 		plot_canvas.get_tk_widget().grid(row=1, column=0, columnspan=2)
 
 		# Create a new live-updating subplot of `figure`
-		def subplot(subplot, indices, bounds, labels=None, title=None):
+		def subplot(subplot, lists, bounds, labels=None, title=None):
 			bounds_min, bounds_max, bounds_thresh = bounds
 			animated_plot = figure.add_subplot(subplot)
 
@@ -105,8 +98,8 @@ class TelemetryPanel:
 			def animate(i):
 				animated_plot.clear()
 				
-				for i in indices:
-					animated_plot.plot(self.drive_data_queues[i])
+				for l in lists:
+					animated_plot.plot(l)
 				
 				if labels is not None: animated_plot.legend(labels)
 				if title is not None:  animated_plot.set_title(title)
@@ -119,10 +112,10 @@ class TelemetryPanel:
 			ani = animation.FuncAnimation(figure, animate, interval=GRAPH_UPDATE_INTERVAL)
 			plot_canvas.show()
 
-		subplot(411, indices=[0], 		bounds=VBUS_VOLTAGE_BOUNDS,	title="Voltage")
-		subplot(412, indices=[1, 2], 	bounds=CURRENT_BOUNDS,		title="Front Current",	labels=['axis0', 'axis1'])
-		subplot(413, indices=[3, 4],	bounds=CURRENT_BOUNDS,		title="Middle Current", labels=['axis0', 'axis1'])
-		subplot(414, indices=[5, 6],	bounds=CURRENT_BOUNDS,		title="Back Current", 	labels=['axis0', 'axis1'])
+		subplot(411, lists=[self.drive_voltages], 			bounds=VBUS_VOLTAGE_BOUNDS,	title="Voltage")
+		subplot(412, lists=self.drive_currents['front'], 	bounds=CURRENT_BOUNDS,		title="Front Current",	labels=['axis0', 'axis1'])
+		subplot(413, lists=self.drive_currents['middle'],	bounds=CURRENT_BOUNDS,		title="Middle Current", labels=['axis0', 'axis1'])
+		subplot(414, lists=self.drive_currents['back'],		bounds=CURRENT_BOUNDS,		title="Back Current", 	labels=['axis0', 'axis1'])
 
 	def init_arm_ui(self, frame):
 		tk.Label(frame, text=' ARM', font=self.FONT_HEADER).grid(row=0, column=0, sticky='n')
@@ -136,7 +129,7 @@ class TelemetryPanel:
 		try:
 			drive = self.drive_telemetry.get()
 		except timeout:
-			drive = DriveTelemetry._make([None] * NUM_DRIVE_DATA)
+			# If this is our first dropped drive telemetry packet after being up, update status
 			if self.drive_status == True:
 				self.drive_status_up.grid_remove()
 				self.drive_status_down.grid()
@@ -145,17 +138,27 @@ class TelemetryPanel:
 			sys.stdout.write('.')
 			sys.stdout.flush()
 		else:
-			drive = DriveTelemetry._make(drive)
+			# If this is our first drive telemetry packet after being down, update status
 			if self.drive_status == False:
 				self.drive_status_down.grid_remove()
 				self.drive_status_up.grid()
 				self.drive_status = True
 
-			for i in range(NUM_DRIVE_DATA):
-				val = drive[i]
-				self.drive_data_queues[i].append(val)
-				if len(self.drive_data_queues[i]) > MAX_QUEUE_SIZE: 
-					self.drive_data_queues[i].pop(0)
+			for odrive in drive:
+				vals = drive[odrive]
+				voltage, current_axis0, current_axis1 = vals
+
+				if odrive == 'front':
+					self.drive_voltages.append(voltage)
+					if len(self.drive_voltages) > MAX_QUEUE_SIZE: 
+						self.drive_voltages.pop(0)
+
+				self.drive_currents[odrive][0].append(current_axis0)
+				if len(self.drive_currents[odrive][0]) > MAX_QUEUE_SIZE: 
+					self.drive_currents[odrive][0].pop(0)
+				self.drive_currents[odrive][1].append(current_axis1)
+				if len(self.drive_currents[odrive][1]) > MAX_QUEUE_SIZE: 
+					self.drive_currents[odrive][1].pop(0)
 
 
 	def update(self):
