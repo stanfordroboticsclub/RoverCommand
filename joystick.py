@@ -1,15 +1,21 @@
 import os
 import pygame
 from UDPComms import Publisher
+import signal
 
-os.environ["SDL_VIDEODRIVER"] = "dummy"
 drive_pub = Publisher(8830)
 arm_pub = Publisher(8410)
 
+# prevents quiting on pi when run through systemd
+def handler(signum, frame):
+    print("GOT singal", signum)
+signal.signal(signal.SIGHUP, handler)
+
+os.environ["SDL_VIDEODRIVER"] = "dummy"
 pygame.display.init()
 pygame.joystick.init()
 
-# wait untill joystick is connected
+# wait until joystick is connected
 while 1:
     try:
         pygame.joystick.Joystick(0).init()
@@ -37,17 +43,25 @@ while True:
     pygame.event.pump()
 
     if mode.startswith('drive'):
-        forward_left = (pygame.joystick.Joystick(0).get_axis(1))
-        forward_right = (pygame.joystick.Joystick(0).get_axis(5))
+        forward_left  = -(pygame.joystick.Joystick(0).get_axis(1))
+        forward_right = -(pygame.joystick.Joystick(0).get_axis(5))
         twist = (pygame.joystick.Joystick(0).get_axis(2))
 
         on_right = (pygame.joystick.Joystick(0).get_button(5))
         on_left = (pygame.joystick.Joystick(0).get_button(4))
+        l_trigger = (pygame.joystick.Joystick(0).get_axis(3))
 
-        if on_left:
-            drive_pub.send({'f':-150*forward_left,'t':-80*twist})
-        elif on_right:
-            drive_pub.send({'f':-150*forward_right,'t':-80*twist})
+        if on_left or on_right:
+            if on_right:
+                forward = forward_right
+            else:
+                forward = forward_left
+
+            slow = 150
+            fast = 300
+            max_speed = (fast+slow)/2 + l_trigger*(fast-slow)/2
+            print(max_speed)
+            drive_pub.send({'f':(max_speed*forward),'t':-150*twist})
         else:
             drive_pub.send({'f':0,'t':0})
 
