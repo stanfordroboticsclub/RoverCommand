@@ -117,6 +117,8 @@ class GPSPanel:
         # the path the autonomous module has chosen, drawn as blue lines
         self.path_sub = Subscriber(9999)
 
+        self.compass_offset_pub = Publisher(8210)
+
 
         # none, waypoint, obstacle, obstacle_radius
         self.mouse_mode = "none"
@@ -454,14 +456,6 @@ class GPSPanel:
             self.canvas.delete(self.arrow)
         try:
             angle = self.gyro.get()['angle'][0]
-
-            try:
-                offset = float(self.compass_entry.get())
-            except:
-                pass
-            else:
-                print('offset', offset)
-                angle += offset
         except:
             pass
         else:
@@ -493,6 +487,15 @@ class GPSPanel:
             self.update_rover()
 
             self.auto_control_pub.send(self.auto_control)
+
+            # Publish compass offset
+            try:
+                compass_offset = float(self.compass_entry.get())
+            except:
+                pass
+            else:
+                self.compass_offset_pub.send(compass_offset)
+
             # self.obstacles_pub.send(self.obstacles)
         except:
             raise
