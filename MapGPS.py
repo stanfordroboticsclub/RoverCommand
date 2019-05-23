@@ -137,9 +137,9 @@ class GPSPanel:
 
 
         ### EXISTING WAYPOINT ACTIONS AND LISTBOX
+        left_row += 1
         # frame for holding all components associated with point library        
         listbox_frame = tk.Frame(self.root)
-        left_row += 1
         listbox_frame.grid(row=left_row, column=0)
 
         self.display_curr_waypoint_frame(listbox_frame)
@@ -208,13 +208,23 @@ class GPSPanel:
         location_frame.grid(row=0, column=top_col)
 
         self.display_location_info_frame(location_frame)
+        top_col += 1
+        ttk.Separator(self.root, orient=VERTICAL).grid(row=0, column=top_col, sticky='ns')
+
+
+        ### COMPASS OFFSET
+        compass_frame = tk.Frame(self.root)
+        top_col += 1
+        compass_frame.grid(row=0, column=top_col)
+
+        self.display_compass_offset_frame(compass_frame)
 
 
 
 
         ### canvas display
         self.canvas = tk.Canvas(self.root, width= self.map.size[1], height= self.map.size[0])
-        self.canvas.grid(row=1, column=1, rowspan=8, columnspan=5)
+        self.canvas.grid(row=1, column=1, rowspan=8, columnspan=8)
 
         self.canvas_img = self.canvas.create_image(0, 0, image=self.map.image, anchor=tk.NW)
 
@@ -249,6 +259,7 @@ class GPSPanel:
     '''
     begin: GUI LAYOUT FUNCTIONS
     '''
+
     def display_curr_waypoint_frame(self, frame):
         # title
         tk.Label(frame, text='EDIT WAYPOINTS', font=self.FONT_HEADER).grid(row=0, column=0, columnspan=4)
@@ -336,6 +347,19 @@ class GPSPanel:
         tk.Label(frame, textvariable=self.rover_lat_str_var).grid(row=1, column=col+1, sticky=W)
         tk.Label(frame, textvariable=self.rover_lon_str_var).grid(row=2, column=col+1, sticky=W)
 
+        col += 2
+        # GPS status
+        tk.Label(frame, text=' GPS RTCM ', font=self.FONT_HEADER).grid(row=0, column=col, columnspan=2)
+
+        tk.Label(frame, text='Qual:').grid(row=1, column=col, sticky=E)
+        tk.Label(frame, text='Age:').grid(row=2, column=col, sticky=E)
+
+        self.gps_rtcm_qual_var = tk.StringVar()
+        self.gps_rtcm_age_var = tk.StringVar()
+        tk.Label(frame, textvariable=self.gps_rtcm_qual_var).grid(row=1, column=col+1, sticky=W)
+        tk.Label(frame, textvariable=self.gps_rtcm_age_var).grid(row=2, column=col+1, sticky=W)
+
+
     def display_mouse_info_frame(self, frame):
         col = 0
 
@@ -357,7 +381,14 @@ class GPSPanel:
         self.mouse_mode_str.set(self.mouse_mode)
         tk.Label(frame, textvariable=self.mouse_mode_str).grid(row=1, column=col)
 
-        
+
+    def display_compass_offset_frame(self, frame):
+        # title
+        tk.Label(frame, text='COMPASS OFFSET (deg)', font=self.FONT_HEADER).grid(row=0, column=0)
+
+        self.compass_entry = tk.Entry(frame, width=10)
+        self.compass_entry.grid(row=1 ,column=0)
+        self.compass_entry.insert(END, "0")
 
 
     '''
@@ -388,6 +419,8 @@ class GPSPanel:
             # print("GPS TIMED OUT")
             self.rover_lon_str_var.set("No GPS")
             self.rover_lat_str_var.set("No GPS")
+            self.gps_rtcm_qual_var.set("No GPS")
+            self.gps_rtcm_age_var.set("No GPS")
         else:
             # TODO: uggly
             tmp = None
@@ -403,6 +436,8 @@ class GPSPanel:
 
             self.rover_lon_str_var.set(rover['lat'])
             self.rover_lat_str_var.set(rover['lon'])
+            self.gps_rtcm_qual_var.set(rover['qual'])
+            self.gps_rtcm_age_var.set(rover['age'])
 
         try:
             base =  self.gps_base.get()
@@ -413,15 +448,24 @@ class GPSPanel:
             self.base_pt = Point.from_gps(self.map, base['lat'], base['lon'])
             self.plot_point(self.base_pt, ROVER_POINT_RADIUS, '#ff0000')
 
-            
+
+        # Draw orientation arrow            
         if self.arrow is not None:
             self.canvas.delete(self.arrow)
         try:
             angle = self.gyro.get()['angle'][0]
-            print(angle)
+
+            try:
+                offset = float(self.compass_entry.get())
+            except:
+                pass
+            else:
+                print('offset', offset)
+                angle += offset
         except:
             pass
         else:
+            print('angle', angle)
             y,x = self.rover_pt.map()
             r = 20
             self.arrow = self.canvas.create_line(x, y, x + r*sin(angle * pi/180),
