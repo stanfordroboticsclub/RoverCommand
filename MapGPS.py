@@ -386,17 +386,27 @@ class GPSPanel:
 
     def display_compass_offset_frame(self, frame):
         # title
-        tk.Label(frame, text='COMPASS OFFSET (deg)', font=self.FONT_HEADER).grid(row=0, column=0)
+        tk.Label(frame, text='COMPASS OFFSET (deg)', font=self.FONT_HEADER).grid(row=0, column=0, columnspan=2)
 
-        self.compass_entry = tk.Entry(frame, width=10)
-        self.compass_entry.grid(row=1 ,column=0)
-        self.compass_entry.insert(END, "0")
+        self.compass_entry = tk.Entry(frame, width=5)
+        self.compass_entry.grid(row=1 ,column=0, sticky=E)
+        self.compass_offset = 0
+        self.compass_entry.insert(END, str(self.compass_offset))
+
+        tk.Button(frame, text='Send', command=lambda: self.update_compass_offset(self.compass_entry.get())).grid(row=1, column=1, sticky=W)
 
 
     '''
     end: GUI LAYOUT FUNCTIONS
     '''
 
+    def update_compass_offset(self, offset_str):
+        try:
+            compass_offset = float(offset_str)
+        except:
+            pass
+        else:
+            self.compass_offset = compass_offset
 
 
     def change_mouse_mode(self,mode):
@@ -487,14 +497,7 @@ class GPSPanel:
             self.update_rover()
 
             self.auto_control_pub.send(self.auto_control)
-
-            # Publish compass offset
-            try:
-                compass_offset = float(self.compass_entry.get())
-            except:
-                pass
-            else:
-                self.compass_offset_pub.send(compass_offset)
+            self.compass_offset_pub.send(self.compass_offset)
 
             # self.obstacles_pub.send(self.obstacles)
         except:
