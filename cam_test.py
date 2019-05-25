@@ -1,6 +1,5 @@
 import tkinter
 import cv2
-import numpy as np
 import PIL.Image, PIL.ImageTk
 import time
 import requests
@@ -14,22 +13,16 @@ class App:
 
         # open video source (by default this will try to open the computer webcam)
         self.vid = MyVideoCapture(self.video_source)
-        self.last_reload = time.time()
-
-        self.reload_time = 30
 
         # Create a canvas that can fit the above video source size
         self.canvas = tkinter.Canvas(window, width = self.vid.width, height = self.vid.height)
 
 
         self.window.bind("<space>", lambda e:self.send_command(0) )
-        self.window.bind("w", lambda e:self.send_command(1) )
-        self.window.bind("s", lambda e:self.send_command(2) )
+        self.window.bind("w", lambda e:self.send_command(2) )
+        self.window.bind("s", lambda e:self.send_command(1) )
         self.window.bind("a", lambda e:self.send_command(3) )
         self.window.bind("d", lambda e:self.send_command(4) )
-
-        self.window.bind("z", lambda e:self.send_command(13) )
-        self.window.bind("x", lambda e:self.send_command(14) )
 
         # self.window.bind("<KeyRelease-w>", lambda e:self.send_command(0) )
         # self.window.bind("<space>", lambda e:self.send_command(0) )
@@ -49,8 +42,8 @@ class App:
 
         self.window.mainloop()
 
-    # def test(self):
-    #     print("hello")
+    def test(self):
+        print("hello")
 
     def send_command(self, number):
         print("sending", number)
@@ -59,50 +52,20 @@ class App:
         requests.post(url, data, auth=('admin','admin'))
 
 
-    def find_ball(self, frame):
-        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
-        candidate_mask = cv2.inRange(frame_hsv, (80, 0, 0), (110, 250,250))
-        candidate_mask = cv2.medianBlur(candidate_mask, 5)
 
-        circles = cv2.HoughCircles(candidate_mask, cv2.HOUGH_GRADIENT,
-            dp=2, minDist=50, param1=100, param2=60, minRadius=10, maxRadius=150)
-
-        if circles is None:
-            return candidate_mask
-
-        circles = np.uint16(np.around(circles))
-        
-        if len(circles) < 1:
-            return frame
-        frame_annotated = frame
-        for x, y, r in circles[0,:]:
-            # draw bounding circle
-            cv2.circle(frame_annotated, (x, y), r, (0,255,0), 2)
-            # plot a point at centroid
-            cv2.circle(frame_annotated, (x, y), 3, (0,0,255), 3)
-
-        return frame_annotated
-
-
-    # def snapshot(self):
-    #     # Get a frame from the video source
-    #     ret, frame = self.vid.get_frame()
-
-    #     if ret:
-    #         cv2.imwrite("frame-" + time.strftime("%d-%m-%Y-%H-%M-%S") + ".jpg", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-
-    def update(self):
-
-        if (time.time() - self.last_reload) > self.reload_time:
-            self.vid = MyVideoCapture(self.video_source)
-            self.last_reload = time.time()
-
+    def snapshot(self):
         # Get a frame from the video source
         ret, frame = self.vid.get_frame()
 
         if ret:
-            frame_annotated = self.find_ball(frame)
-            self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame_annotated))
+            cv2.imwrite("frame-" + time.strftime("%d-%m-%Y-%H-%M-%S") + ".jpg", cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+
+    def update(self):
+        # Get a frame from the video source
+        ret, frame = self.vid.get_frame()
+
+        if ret:
+            self.photo = PIL.ImageTk.PhotoImage(image = PIL.Image.fromarray(frame))
             self.canvas.create_image(0, 0, image = self.photo, anchor = tkinter.NW)
 
         self.window.after(self.delay, self.update)
