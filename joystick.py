@@ -108,7 +108,8 @@ while True:
                       "grip": cross - square,
                       "hat": hat,
                       "reset": reset,
-                      "trueXYZ": circle}
+                      "trueXYZ": circle
+                      "dock": triangle}
         else:
               target_vel = {"x": 0,
                       "y": 0,
