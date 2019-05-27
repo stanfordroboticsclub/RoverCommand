@@ -97,6 +97,7 @@ while True:
         hat = pygame.joystick.Joystick(0).get_hat(0)
 
         reset = (PS == 1) and (triangle == 1)
+        reset_dock = (PS==1) and (square ==1)
 
         if(PS == 0):
               target_vel = {"x": l_side,
@@ -108,7 +109,8 @@ while True:
                       "grip": cross - square,
                       "hat": hat,
                       "reset": reset,
-                      "trueXYZ": circle
+                      "resetdock":reset_dock,
+                      "trueXYZ": circle,
                       "dock": triangle}
         else:
               target_vel = {"x": 0,
@@ -120,7 +122,9 @@ while True:
                       "grip": 0,
                       "hat": (0,0),
                       "reset": reset,
-                      "trueXYZ": 0}
+                      "resetdock": reset_dock,
+                      "trueXYZ": 0,
+                      "dock":0}
         print(target_vel)
         arm_pub.send(target_vel)
     else:
