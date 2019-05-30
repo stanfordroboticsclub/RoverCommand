@@ -17,10 +17,11 @@ import csv
 
 ### GUI constants
 WAYPOINT_POINT_RADIUS =     8
-ROVER_POINT_RADIUS =        3
+ROVER_POINT_RADIUS =        6
 
 WAYPOINT_DEFAULT_COLOR =    'purple'
 WAYPOINT_SELECTED_COLOR =   'cyan'
+ROVER_POINT_COLOR =         '#EF74B6'
 
 
 
@@ -66,6 +67,9 @@ class Point:
     def from_xy(cls, mp, x_m,y_m):
         pass
 
+    def changeMap(self, new_map):
+        self._map = new_map
+
     def gps(self):
         return (self.latitude,self.longitude)
 
@@ -89,7 +93,7 @@ class GPSPanel:
         ### LOAD MAPS
         self.load_maps()
         self.map = self.maps[self.maps.keys()[0]]
-        self.map = self.maps['MDRS_overview']
+        self.map = self.maps['behind_hotel']
 
 
         ## UDPComms
@@ -417,9 +421,14 @@ class GPSPanel:
         self.auto_control[u'command'] = unicode(mode, "utf-8")
 
     def change_map(self, *args):
+        # Get new map
         self.map = self.maps[self.map_str_var.get()]
+
+        # Plot on canvas
         self.canvas.config(width=self.map.size[1], height=self.map.size[0])
         self.canvas.itemconfig(self.canvas_img, image=self.map.image)
+
+        # Replot any waypoints currently onscreen
 
 
 
@@ -441,13 +450,13 @@ class GPSPanel:
             self.rover_pt = Point.from_gps(self.map, rover['lat'], rover['lon'])
             if tmp is not None:
                 self.rover_pt.plot = tmp
-            self.plot_point(self.rover_pt, ROVER_POINT_RADIUS, '#ff6400')
+            self.plot_point(self.rover_pt, ROVER_POINT_RADIUS, ROVER_POINT_COLOR)
 
             if rover['local'][0]:
                 print("x", rover['local'][1], "y", rover['local'][2])
 
-            self.rover_lon_str_var.set(rover['lat'])
-            self.rover_lat_str_var.set(rover['lon'])
+            self.rover_lon_str_var.set(rover['lon'])
+            self.rover_lat_str_var.set(rover['lat'])
             self.gps_rtcm_qual_var.set(rover['qual'])
             self.gps_rtcm_age_var.set(rover['age'])
 
@@ -479,6 +488,7 @@ class GPSPanel:
     def update_waypoints(self):
         for i, p in enumerate(self.pointLibrary):
             _, point = p
+            point.changeMap(self.map) # update map to be most current map
             if i in self.listbox.curselection():
                 self.plot_selected_point(point)
             else:
