@@ -89,7 +89,7 @@ class GPSPanel:
         ### LOAD MAPS
         self.load_maps()
         self.map = self.maps[self.maps.keys()[0]]
-        self.map = self.maps['oval']
+        self.map = self.maps['MDRS_overview']
 
 
         ## UDPComms
