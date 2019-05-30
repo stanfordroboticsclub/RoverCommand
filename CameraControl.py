@@ -4,6 +4,7 @@
 import time
 import Tkinter as tk
 from UDPComms import Publisher
+import os
 
 
 class PTZPannel:
@@ -15,11 +16,19 @@ class PTZPannel:
         self.bk=tk.Button(self.root,text='Down',command=lambda : self.downKey(None))
         self.rt=tk.Button(self.root,text='Right',command=lambda : self.rightKey(None))
         self.lt=tk.Button(self.root,text='Left',command=lambda : self.leftKey(None))
+        self.cam2=tk.Button(self.root,text='POV',command=lambda : self.launchCam('camera2'))
+        self.cam3=tk.Button(self.root,text='Side',command=lambda : self.launchCam('camera3'))
+        self.ptz=tk.Button(self.root,text='PTZ',command=lambda : self.launchCam('ptz'))
+        self.drive=tk.Button(self.root,text='drive',command=lambda : self.launchCam('drive'))
 
         self.fd.pack()
         self.bk.pack()
         self.rt.pack()
         self.lt.pack()
+        self.cam2.pack()
+        self.cam3.pack()
+        self.ptz.pack()
+        self.drive.pack()
 
         self.root.bind('<Left>',  lambda x: self.leftKey(x))
         self.root.bind('<Right>', lambda x: self.rightKey(x))
@@ -30,11 +39,15 @@ class PTZPannel:
         self.pan = 0
         self.tilt = 0
 
-        self.speed = 1
+        self.speed = 2
         self.time = time.time()
 
         self.root.after(100, self.update)
         self.root.mainloop()
+
+
+    def launchCam(self, cam):
+        os.system("bash launch_camera.sh "+cam+".local")
 
     def spaceKey(self, event):
         print "space"
