@@ -296,8 +296,9 @@ class GPSPanel:
         tk.Label(create_click_frame, text='Click to add:').grid(row=0, column=0, columnspan=2)
 
         tk.Button(create_click_frame, text='Waypoint', command=lambda: self.change_mouse_mode('waypoint') ).grid(row=1, column=0)
-        tk.Button(create_click_frame, text='Obstacle', command=lambda: self.change_mouse_mode('obstacle') ).grid(row=1, column=1)
-        tk.Button(create_click_frame, text='None', command=lambda: self.change_mouse_mode('none') ).grid(row=2, column=0, columnspan=2)
+        tk.Button(create_click_frame, text='Rover', command=lambda: self.new_waypoint(self.rover_pt, name="Rover") ).grid(row=1, column=1)
+        tk.Button(create_click_frame, text='Obstacle', command=lambda: self.change_mouse_mode('obstacle') ).grid(row=2, column=0)
+        tk.Button(create_click_frame, text='None', command=lambda: self.change_mouse_mode('none') ).grid(row=2, column=1)
         
 
         ### manual add waypoint functions
@@ -488,6 +489,10 @@ class GPSPanel:
     def update_waypoints(self):
         for i, p in enumerate(self.pointLibrary):
             _, point = p
+
+            if point == None:
+                continue
+
             point.changeMap(self.map) # update map to be most current map
             if i in self.listbox.curselection():
                 self.plot_selected_point(point)
@@ -495,7 +500,7 @@ class GPSPanel:
                 self.plot_normal_point(point)
 
         # populate UDPComms message with current ordered list of waypoints
-        msg = [ {u'lat': point.gps()[0], u'lon': point.gps()[1]} for _, point in self.pointLibrary ]
+        msg = [ {u'lat': point.gps()[0], u'lon': point.gps()[1]} for _, point in self.pointLibrary if point != None ]
         self.auto_control[u'waypoints'] = msg
 
     def update(self):
@@ -572,6 +577,9 @@ class GPSPanel:
             print "ERROR"
 
     def plot_point(self, point, radius, color, **kwargs):
+        if point == None:
+            return
+
         if point.plot != None:
             self.del_point(point)
         r = radius
@@ -587,6 +595,9 @@ class GPSPanel:
         self.name_entry.delete(0, END)
 
     def new_waypoint(self, point, name=""):
+        if point == None: 
+            return
+
         self.plot_normal_point(point)
 
         # optional name for the point
@@ -637,7 +648,6 @@ class GPSPanel:
 
     def plot_normal_point(self, point):
         self.plot_point(point, WAYPOINT_POINT_RADIUS, WAYPOINT_DEFAULT_COLOR)
-
 
 
 if __name__ == "__main__":
