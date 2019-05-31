@@ -107,7 +107,7 @@ class GPSPanel:
         self.base_pt = None
 
         # publishes the point the robot should be driving to
-        self.auto_control  = {u"waypoints": [], u"command":u"off"}
+        self.auto_control  = {u"waypoints": [], u"command":u"off", u"end_mode":u"none"}
         self.auto_control_pub = Publisher(8310)
         self.pub_pt = None
 
@@ -268,7 +268,7 @@ class GPSPanel:
 
     def display_curr_waypoint_frame(self, frame):
         # title
-        tk.Label(frame, text='EDIT WAYPOINTS', font=self.FONT_HEADER).grid(row=0, column=0, columnspan=4)
+        tk.Label(frame, text='EDIT WAYPOINTS', font=self.FONT_HEADER).grid(row=0, column=0, columnspan=3)
 
         # actions on listbox of points
         tk.Button(frame, text='Delete',    command=lambda: self.delete_selected_waypoint() ) \
@@ -282,8 +282,12 @@ class GPSPanel:
 
         # listbox displaying points
         self.listbox = tk.Listbox(frame)
-        self.listbox.grid(row=2, column=0, columnspan=4)
+        self.listbox.grid(row=2, column=0, columnspan=3)
         self.listbox.bind('<FocusOut>',            lambda: self.listbox.selection_clear(0, END))
+
+        self.end_with_tennis_search = IntVar()
+        tk.Checkbutton(frame, text="End with tennis ball search", variable=self.end_with_tennis_search) \
+            .grid(row=3, column=0, columnspan=3)
 
     def display_create_waypoint_frame(self, frame):
         # title
@@ -502,6 +506,7 @@ class GPSPanel:
         # populate UDPComms message with current ordered list of waypoints
         msg = [ {u'lat': point.gps()[0], u'lon': point.gps()[1]} for _, point in self.pointLibrary if point != None ]
         self.auto_control[u'waypoints'] = msg
+        self.auto_control[u'end_mode'] = 'none' if self.end_with_tennis_search.get() == 0 else 'tennis'
 
     def update(self):
         try:
@@ -512,6 +517,7 @@ class GPSPanel:
             self.update_rover()
 
             self.auto_control_pub.send(self.auto_control)
+            print(self.auto_control[u'end_mode'])
             self.compass_offset_pub.send(self.compass_offset)
 
             # self.obstacles_pub.send(self.obstacles)
