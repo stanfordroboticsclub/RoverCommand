@@ -93,7 +93,7 @@ class GPSPanel:
         ### LOAD MAPS
         self.load_maps()
         self.map = self.maps[self.maps.keys()[0]]
-        self.map = self.maps['behind_hotel']
+        self.map = self.maps['science_overview']
 
 
         ## UDPComms
@@ -483,7 +483,7 @@ class GPSPanel:
         except:
             pass
         else:
-            print('angle', angle)
+            # print('angle', angle)
             y,x = self.rover_pt.map()
             r = 20
             self.arrow = self.canvas.create_line(x, y, x + r*sin(angle * pi/180),
@@ -517,7 +517,7 @@ class GPSPanel:
             self.update_rover()
 
             self.auto_control_pub.send(self.auto_control)
-            print(self.auto_control[u'end_mode'])
+            # print(self.auto_control[u'end_mode'])
             self.compass_offset_pub.send(self.compass_offset)
 
             # self.obstacles_pub.send(self.obstacles)
