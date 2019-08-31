@@ -11,7 +11,10 @@ def handler(signum, frame):
     print("GOT singal", signum)
 signal.signal(signal.SIGHUP, handler)
 
+# those two lines allow for running headless (hopefully)
 os.environ["SDL_VIDEODRIVER"] = "dummy"
+os.putenv('DISPLAY', ':0.0')
+
 pygame.display.init()
 pygame.joystick.init()
 
