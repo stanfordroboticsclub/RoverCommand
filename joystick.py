@@ -58,14 +58,14 @@ while True:
                 forward = forward_left
 
             slow = 150
-            fast = 300
+            fast = 500
             max_speed = (fast+slow)/2 + l_trigger*(fast-slow)/2
             print(max_speed)
             drive_pub.send({'f':(max_speed*forward),'t':-150*twist})
         else:
             pass
             #without button go into freewheel
-            # drive_pub.send({'f':0,'t':0})
+            drive_pub.send({'f':0,'t':0})
 
     if mode.startswith('arm'):
         r_forward  = -(pygame.joystick.Joystick(0).get_axis(5))
