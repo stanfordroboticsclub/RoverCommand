@@ -23,6 +23,12 @@ WAYPOINT_DEFAULT_COLOR =    'purple'
 WAYPOINT_SELECTED_COLOR =   'cyan'
 ROVER_POINT_COLOR =         '#EF74B6'
 
+### MAP SETTINGS
+MAP_AREA = "stanford"
+# MAP_AREA = "autonomy"
+# MAP_AREA = "MDRS"
+# MAP_AREA = "science"
+
 
 
 class Map:
@@ -93,7 +99,7 @@ class GPSPanel:
         ### LOAD MAPS
         self.load_maps()
         self.map = self.maps[self.maps.keys()[0]]
-        self.map = self.maps['science_overview']
+        # self.map = self.maps['science_overview']
 
 
         ## UDPComms
@@ -247,7 +253,7 @@ class GPSPanel:
     def load_maps(self):
         self.maps = {}
 
-        with open('maps/info.csv') as maps_csv:
+        with open( 'maps/{}/info.csv'.format(MAP_AREA) ) as maps_csv:
             csv_reader = csv.DictReader(maps_csv, delimiter=',')
             for row in csv_reader:
                 filename = row['filename']
@@ -257,7 +263,7 @@ class GPSPanel:
                 top_left = (float(row['top_left_lat']), float(row['top_left_lon']))
                 bottom_right = (float(row['bottom_right_lat']), float(row['bottom_right_lon']))
                 
-                self.maps[name] = Map('maps/{}'.format(filename), \
+                self.maps[name] = Map('maps/{}/{}'.format(MAP_AREA, filename), \
                                       size=size, \
                                       top_left=top_left, \
                                       bottom_right=bottom_right)
